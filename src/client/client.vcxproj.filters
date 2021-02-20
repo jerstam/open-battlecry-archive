@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="client_windows.c" />
+    <ClCompile Include="font_arial_32.c" />
+    <ClCompile Include="gpu.c" />
+    <ClCompile Include="gpu_buffer.c" />
+    <ClCompile Include="graphics.c" />
+    <ClCompile Include="input.c" />
+    <ClCompile Include="main.c" />
+    <ClCompile Include="renderer.c" />
+    <ClCompile Include="resource.c" />
+    <ClCompile Include="volk.c" />
+    <ClCompile Include="window.c" />
+    <ClCompile Include="..\cvar.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hash.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hash_map.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\jobs.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\log.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os_windows.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\pool.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\random.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="gpu_memory.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="font.h" />
+    <ClInclude Include="gpu.h" />
+    <ClInclude Include="input.h" />
+    <ClInclude Include="renderer.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="shaders.h" />
+    <ClInclude Include="volk.h" />
+    <ClInclude Include="window.h" />
+    <ClInclude Include="..\animation.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cvar.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hash.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hash_map.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\jobs.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\log.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\macros.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\os.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pool.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\random.h">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{3bc953ad-1ed1-4a4b-aebf-2fb1def8ca5e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{17bca69d-084b-4d22-b5f4-08056e4417b1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\assets\shaders\blit.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\..\assets\shaders\fullscreen.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\..\assets\shaders\line.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\..\assets\shaders\line.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\..\assets\shaders\sprite.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\..\assets\shaders\sprite.vert">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>

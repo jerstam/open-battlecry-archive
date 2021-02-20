@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="game.c" />
+    <ClCompile Include="game_state.c" />
+    <ClCompile Include="..\cvar.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hash.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hash_map.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\jobs.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\log.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os_windows.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\pool.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\random.c">
+      <Filter>common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="game.h" />
+    <ClInclude Include="game_state.h" />
+    <ClInclude Include="..\animation.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cvar.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hash.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\hash_map.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\jobs.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\log.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\macros.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\os.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pool.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\random.h">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{40837bc6-8945-4e37-96d0-91bac7ec5dac}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
