@@ -137,3 +137,4 @@ assets
 *.scor
 *.scor.*
 .idea
+*.xcr

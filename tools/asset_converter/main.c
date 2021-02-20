@@ -4,8 +4,8 @@
 #include <assert.h>
 #include <ctype.h>
 #include "tinydir.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <png.h>
+#include <zlib.h>
 
 enum
 {
@@ -144,9 +144,7 @@ static inline uint8_t convert_565_to_B(uint16_t pixel) { return (((uint8_t)((pix
 
 /* SSG RLS encoding:
  *	- Two 255 values mean a blank line
- *  - 250 is a shadow
- *  - The X offsets wrap around 127
- *  - The block is the x position >> 7 
+ *  - 250-254 are shadows
  *  - 224-238 are the side colors (15 max)
  */
 static void rle_to_png(const char* file_name, const rle_header_t* rle_header, const uint8_t* data)
@@ -177,70 +175,136 @@ static void rle_to_png(const char* file_name, const rle_header_t* rle_header, co
 	stbi_write_bmp("palette.bmp", 16, 16, 3, palette_data);
 	free(palette_data);*/
 
-	uint8_t* png_data = calloc((size_t)width * (size_t)height * 4, 1);
-	assert(png_data);
+	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	assert(png_ptr);
 
-	int png_data_index = 0;
-	for (int x = 0; x < size; x++)
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	assert(info_ptr);
+
+	if (setjmp(png_jmpbuf(png_ptr))) assert(0);
+
+	png_set_IHDR(
+		png_ptr,
+		info_ptr,
+		width, height,
+		8,
+		PNG_COLOR_TYPE_RGBA,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT
+	);
+
+	png_byte** png_rows = png_malloc(png_ptr, height * sizeof(png_byte*));
+	assert(png_rows);
+	size_t row_size = width * sizeof(uint8_t) * 4;
+	for (int y = 0; y < height; y++)
 	{
-		int16_t value = data[x];
+		png_rows[y] = png_malloc(png_ptr, row_size);
+		assert(png_rows[y]);
+	}
+
+	int byte_count = 0;
+	int row = 0;
+	png_byte* png_row = png_rows[row];
+	for (int pixel = 0; pixel < size; pixel++)
+	{
+		int16_t value = data[pixel];
 
 		if (value == 255)
 		{
-			int16_t count = data[x + 1];
+			int16_t count = data[pixel + 1];
 
 			// Two consecutive 255 means a blank line
-			if (x < size - 1 && data[x + 1] == 255)
+			if (pixel < size - 1 && data[pixel + 1] == 255)
 			{
 				count = rle_header->width;
 			}
 
 			for (int16_t i = 0; i < count; i++)
 			{
-				png_data[png_data_index++] = 0;
-				png_data[png_data_index++] = 0;
-				png_data[png_data_index++] = 0;
-				png_data[png_data_index++] = 0;
+				if (byte_count >= row_size)
+				{
+					row++;
+					png_row = png_rows[row];
+					byte_count = 0;
+				}
+
+				png_row[byte_count++] = 0;
+				png_row[byte_count++] = 0;
+				png_row[byte_count++] = 0;
+				png_row[byte_count++] = 0;
 			}
-			x++;
+			pixel++;
 		}
 		else if (value == PIXEL_SHADOW_START)
 		{
 			uint8_t alpha = shadow_alpha[value - PIXEL_SHADOW_START];
-			int16_t count = data[x + 1];
+			int16_t count = data[pixel + 1];
 
 			for (int16_t i = 0; i < count; i++)
 			{
-				png_data[png_data_index++] = shadow_color;
-				png_data[png_data_index++] = shadow_color;
-				png_data[png_data_index++] = shadow_color;
-				png_data[png_data_index++] = alpha;
+				if (byte_count >= row_size)
+				{
+					row++;
+					png_row = png_rows[row];
+					byte_count = 0;
+				}
+
+				png_row[byte_count++] = shadow_color;
+				png_row[byte_count++] = shadow_color;
+				png_row[byte_count++] = shadow_color;
+				png_row[byte_count++] = alpha;
 			}
-			x++;
+			pixel++;
 		}
 		else if (value > PIXEL_SHADOW_START)
 		{
 			uint8_t alpha = shadow_alpha[value - PIXEL_SHADOW_START];
 
-			png_data[png_data_index++] = shadow_color;
-			png_data[png_data_index++] = shadow_color;
-			png_data[png_data_index++] = shadow_color;
-			png_data[png_data_index++] = alpha;
+			if (byte_count >= row_size)
+			{
+				row++;
+				png_row = png_rows[row];
+				byte_count = 0;
+			}
+
+			png_row[byte_count++] = shadow_color;
+			png_row[byte_count++] = shadow_color;
+			png_row[byte_count++] = shadow_color;
+			png_row[byte_count++] = alpha;
 		}
 		else
 		{
 			int16_t color = rle_header->palettes[0][value];
 
-			png_data[png_data_index++] = convert_565_to_R(color);
-			png_data[png_data_index++] = convert_565_to_G(color);
-			png_data[png_data_index++] = convert_565_to_B(color);
-			png_data[png_data_index++] = 255;
+			if (byte_count >= row_size)
+			{
+				row++;
+				png_row = png_rows[row];
+				byte_count = 0;
+			}
+
+			png_row[byte_count++] = convert_565_to_R(color);
+			png_row[byte_count++] = convert_565_to_G(color);
+			png_row[byte_count++] = convert_565_to_B(color);
+			png_row[byte_count++] = 255;
 		}
 	}
 
-	stbi_write_png(file_name, width, height, 4, png_data, width * 4);
+	FILE* png_file = fopen(file_name, "wb");
+	assert(png_file);
+	png_init_io(png_ptr, png_file);
 
-	free(png_data);
+	png_set_rows(png_ptr, info_ptr, png_rows);
+	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+
+	for (int y = 0; y < height; y++)
+	{
+		png_free(png_ptr, png_rows[y]);
+	}
+	png_free(png_ptr, png_rows);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+	fclose(png_file);
 }
 
 static const char* get_extension(const char* file_name) 
@@ -299,8 +363,6 @@ int main(int argc, const char* argv[])
 	{
 		resource_header_t resource_header = { 0 };
 		fread(&resource_header, sizeof(resource_header), 1, xcr_file);
-		printf("  Reading %s (%s)\n", resource_header.file_name, resource_header.full_path);
-		printf("    Encrypted: %d\n", resource_header.encrypted);
 
 		const char* extension = get_extension(resource_header.file_name);
 		if (strncmp(extension, "RLE", 3) == 0)
@@ -323,7 +385,8 @@ int main(int argc, const char* argv[])
 	// Convert RLE images to PNG
 	for (uint32_t i = 0; i < image_count; i++)
 	{
-		printf("Converting %s to PNG...\n", image_names[i]);
+		printf("Processing %s\n", image_names[i]);
+
 		fseek(xcr_file, image_offsets[i], SEEK_SET);
 
 		// Read ID
@@ -335,7 +398,6 @@ int main(int argc, const char* argv[])
 			// TODO: Handle true RLE images
 			continue;
 		}
-		printf("  ID: %s\n", id);
 
 		rle_header_t rle_header = { 0 };
 		fread(&rle_header, sizeof(rle_header), 1, xcr_file);
@@ -347,8 +409,6 @@ int main(int argc, const char* argv[])
 		uint8_t* data = malloc(size);
 		assert(data);
 		fread(data, size, 1, xcr_file);
-
-		printf("  Read: %d pixels\n", size);
 
 		char* dot = strrchr(image_names[i], '.');
 		dot[1] = 'p';

@@ -4,7 +4,6 @@
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stb_image_write.h" />
     <ClInclude Include="tinydir.h" />
   </ItemGroup>
 </Project>
