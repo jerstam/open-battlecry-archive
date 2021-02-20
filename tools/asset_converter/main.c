@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <ctype.h>
-
+#include "tinydir.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 

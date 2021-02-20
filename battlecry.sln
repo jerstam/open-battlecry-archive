@@ -7,8 +7,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "src\client\client
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "game", "src\game\game.vcxproj", "{62E72805-8B7F-45B7-A951-A5D7362CA1E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetConverter", "tools\AssetConverter\AssetConverter.csproj", "{8DDE8B79-E0F3-4407-9FEF-ED5B972E2DD7}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asset_converter", "tools\asset_converter\asset_converter.vcxproj", "{B9DB002D-3C96-4BF9-BD67-90B77A18E6C7}"
 EndProject
 Global
@@ -25,10 +23,6 @@ Global
 		{62E72805-8B7F-45B7-A951-A5D7362CA1E7}.Debug|x64.Build.0 = Debug|x64
 		{62E72805-8B7F-45B7-A951-A5D7362CA1E7}.Release|x64.ActiveCfg = Release|x64
 		{62E72805-8B7F-45B7-A951-A5D7362CA1E7}.Release|x64.Build.0 = Release|x64
-		{8DDE8B79-E0F3-4407-9FEF-ED5B972E2DD7}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8DDE8B79-E0F3-4407-9FEF-ED5B972E2DD7}.Debug|x64.Build.0 = Debug|Any CPU
-		{8DDE8B79-E0F3-4407-9FEF-ED5B972E2DD7}.Release|x64.ActiveCfg = Release|Any CPU
-		{8DDE8B79-E0F3-4407-9FEF-ED5B972E2DD7}.Release|x64.Build.0 = Release|Any CPU
 		{B9DB002D-3C96-4BF9-BD67-90B77A18E6C7}.Debug|x64.ActiveCfg = Debug|x64
 		{B9DB002D-3C96-4BF9-BD67-90B77A18E6C7}.Debug|x64.Build.0 = Debug|x64
 		{B9DB002D-3C96-4BF9-BD67-90B77A18E6C7}.Release|x64.ActiveCfg = Release|x64
