@@ -3,9 +3,15 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <ctype.h>
-#include "tinydir.h"
+
+#define WIN32_LEAN_AND_MEAN
 #include <png.h>
 #include <zlib.h>
+#include <tchar.h>
+#include <Windows.h>
+#include <Shlobj.h>
+
+#pragma comment(lib,"Shell32.lib")
 
 enum
 {
@@ -107,10 +113,13 @@ typedef struct rle_header_t
 	int16_t pointer_block_count;
 } rle_header_t;
 
+static FILE* xcr_file;
 static uint32_t image_count;
-static uint32_t image_sizes[256];
 static uint32_t image_offsets[256];
 static char image_names[256][32];
+
+static char mbs_output_directory[MAX_PATH];
+static TCHAR output_directory[MAX_PATH];
 
 static const uint8_t shadow_color = 0;
 static uint8_t shadow_alpha[PIXEL_SHADOW_COUNT] = {
@@ -147,9 +156,9 @@ static inline uint8_t convert_565_to_B(uint16_t pixel) { return (((uint8_t)((pix
  *  - 250-254 are shadows
  *  - 224-238 are the side colors (15 max)
  */
-static void rle_to_png(const char* file_name, const rle_header_t* rle_header, const uint8_t* data)
+static void rle_to_png(const char* file_path, const rle_header_t* rle_header, const uint8_t* data, bool shadowed)
 {
-	assert(file_name);
+	assert(file_path);
 	assert(rle_header);
 	assert(data);
 
@@ -236,7 +245,7 @@ static void rle_to_png(const char* file_name, const rle_header_t* rle_header, co
 			}
 			pixel++;
 		}
-		else if (value == PIXEL_SHADOW_START)
+		else if (shadowed && value == PIXEL_SHADOW_START)
 		{
 			uint8_t alpha = shadow_alpha[value - PIXEL_SHADOW_START];
 			int16_t count = data[pixel + 1];
@@ -257,7 +266,7 @@ static void rle_to_png(const char* file_name, const rle_header_t* rle_header, co
 			}
 			pixel++;
 		}
-		else if (value > PIXEL_SHADOW_START)
+		else if (shadowed && value > PIXEL_SHADOW_START)
 		{
 			uint8_t alpha = shadow_alpha[value - PIXEL_SHADOW_START];
 
@@ -273,7 +282,7 @@ static void rle_to_png(const char* file_name, const rle_header_t* rle_header, co
 			png_row[byte_count++] = shadow_color;
 			png_row[byte_count++] = alpha;
 		}
-		else
+		else 
 		{
 			int16_t color = rle_header->palettes[0][value];
 
@@ -291,7 +300,7 @@ static void rle_to_png(const char* file_name, const rle_header_t* rle_header, co
 		}
 	}
 
-	FILE* png_file = fopen(file_name, "wb");
+	FILE* png_file = fopen(file_path, "wb");
 	assert(png_file);
 	png_init_io(png_ptr, png_file);
 
@@ -327,7 +336,10 @@ static void to_snake_case(char* out, size_t out_size, const char* in)
 				out[n++] = 0;
 				return;
 			}
-			out[n++] = '_';
+			if (n > 0)
+			{
+				out[n++] = '_';
+			}
 			out[n++] = *inp + ('a' - 'A');
 		}
 		else
@@ -339,19 +351,55 @@ static void to_snake_case(char* out, size_t out_size, const char* in)
 	out[n++] = 0;
 }
 
-int main(int argc, const char* argv[])
+static void process_rle(uint32_t index, const char* xcr_name)
 {
-#if _DEBUG
-	const char* xcr_file_name = "Daemons.xcr";
-#else
-	if (argc < 2)
-		return 0;
-	const char* xcr_file_name = argv[1];
-#endif 
+	assert(xcr_name);
 
-	FILE* xcr_file = fopen(xcr_file_name, "rb");
+	printf("  Processing %s\n", image_names[index]);
+
+	fseek(xcr_file, image_offsets[index], SEEK_SET);
+
+	// Read ID
+	char id[3];
+	id[2] = '\0';
+	fread(id, 2, 1, xcr_file);
+
+	rle_header_t rle_header = { 0 };
+	fread(&rle_header, sizeof(rle_header), 1, xcr_file);
+
+	// Skip the pointer blocks
+	fseek(xcr_file, rle_header.total_pointer_block_size, SEEK_CUR);
+
+	uint32_t size = rle_header.size - rle_header.total_pointer_block_size;
+	uint8_t* data = malloc(size);
+	assert(data);
+	fread(data, size, 1, xcr_file);
+
+	char* dot = strrchr(image_names[index], '.');
+	dot[1] = 'p';
+	dot[2] = 'n';
+	dot[3] = 'g';
+
+	char png_path[MAX_PATH];
+	strcpy(png_path, mbs_output_directory);
+	strcat(png_path, xcr_name);
+	strcat(png_path, "\\");
+	strcat(png_path, image_names[index]);
+
+	rle_to_png(png_path, &rle_header, data, id[1] == 'S');
+
+	free(data);
+}
+
+static void process_xcr(const char* file_path)
+{
+	image_count = 0;
+	memset(image_names, 0, sizeof(image_names));
+	memset(image_offsets, 0, sizeof(image_offsets));
+
+	xcr_file = fopen(file_path, "rb");
 	assert(xcr_file);
-	printf("Opened %s\n", xcr_file_name);
+	printf("Opened %s\n", file_path);
 
 	// Read XCR header
 	xcr_header_t xcr_header = { 0 };
@@ -367,64 +415,127 @@ int main(int argc, const char* argv[])
 		const char* extension = get_extension(resource_header.file_name);
 		if (strncmp(extension, "RLE", 3) == 0)
 		{
-			image_sizes[image_count] = resource_header.file_size;
 			image_offsets[image_count] = resource_header.offset;
 			strncpy(image_names[image_count], resource_header.file_name, strlen(resource_header.file_name));
 			++image_count;
 		}
 	}
-	printf("\n");
 
-	/*char xcr_without_ext[32];
-	strncpy(xcr_without_ext, xcr_file_name, strlen(xcr_file_name));
-	char* dot = strrchr(xcr_without_ext, '.');
+	char* xcr_name = strrchr(file_path, '\\');
+	xcr_name++;
+	char* dot = strrchr(file_path, '.');
 	*dot = '\0';
-	char directory[32];
-	to_snake_case(directory, 32, xcr_without_ext);*/
 
-	// Convert RLE images to PNG
+	char snake_xcr_name[32];
+	to_snake_case(snake_xcr_name, 32, xcr_name);
+
+	TCHAR wcs_xcr_name[32];
+	mbstowcs(wcs_xcr_name, snake_xcr_name, 32);
+
+	TCHAR out_dir[MAX_PATH];
+	wcscpy(out_dir, output_directory);
+	wcscat(out_dir, TEXT("\\"));
+	wcscat(out_dir, wcs_xcr_name);
+	SHCreateDirectoryEx(NULL, out_dir, NULL);
+
+	// Process resources
 	for (uint32_t i = 0; i < image_count; i++)
 	{
-		printf("Processing %s\n", image_names[i]);
-
-		fseek(xcr_file, image_offsets[i], SEEK_SET);
-
-		// Read ID
-		char id[3];
-		id[2] = '\0';
-		fread(id, 2, 1, xcr_file);
-		if (id[1] == 'L')
-		{
-			// TODO: Handle true RLE images
-			continue;
-		}
-
-		rle_header_t rle_header = { 0 };
-		fread(&rle_header, sizeof(rle_header), 1, xcr_file);
-
-		// Skip the pointer blocks
-		fseek(xcr_file, rle_header.total_pointer_block_size, SEEK_CUR);
-
-		uint32_t size = rle_header.size - rle_header.total_pointer_block_size;
-		uint8_t* data = malloc(size);
-		assert(data);
-		fread(data, size, 1, xcr_file);
-
-		char* dot = strrchr(image_names[i], '.');
-		dot[1] = 'p';
-		dot[2] = 'n';
-		dot[3] = 'g';
-
-		/*char full_file_name[64];
-		snprintf(full_file_name, 64, "%s/%s", directory, image_names[i]);
-		printf(full_file_name);*/
-
-		rle_to_png(image_names[i], &rle_header, data);
-
-		free(data);
+		process_rle(i, snake_xcr_name);
 	}
 
 	fclose(xcr_file);
+}
+
+static void process_dir(const TCHAR* path)
+{
+	HANDLE find = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATA find_data;
+
+	TCHAR search_path[MAX_PATH];
+	wcscpy(search_path, path);
+	wcscat(search_path, TEXT("\\*"));
+
+	find = FindFirstFile(search_path, &find_data);
+	if (find == INVALID_HANDLE_VALUE)
+	{
+		return;
+	}
+
+	int subdir_count = 0;
+	TCHAR subdirs[28][MAX_PATH];
+
+	do
+	{
+		if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			TCHAR* dir_name = find_data.cFileName;
+
+			if (dir_name[0] != '.')
+			{
+				wcscpy(subdirs[subdir_count], path);
+				wcscat(subdirs[subdir_count], TEXT("\\"));
+				wcscat(subdirs[subdir_count], dir_name);
+				subdir_count++;
+				wprintf(TEXT("%s\n"), dir_name);
+			}
+		}
+		else
+		{
+			TCHAR* dot = wcsrchr(find_data.cFileName, '.');
+			if (dot[1] == 'x' && dot[2] == 'c' && dot[3] == 'r')
+			{
+				wprintf(TEXT("  %s\n"), find_data.cFileName);
+
+				char mbs_file_name[32];
+				wcstombs(mbs_file_name, find_data.cFileName, 32);
+
+				char mbs_path[MAX_PATH];
+				wcstombs(mbs_path, path, MAX_PATH);
+				strcat(mbs_path, "\\");
+				strcat(mbs_path, mbs_file_name);
+
+				process_xcr(mbs_path);
+			}
+		}
+	} while (FindNextFile(find, &find_data) != 0);
+
+	for (int i = 0; i < subdir_count; i++)
+	{
+		process_dir(subdirs[i]);
+	}
+
+	FindClose(find);
+}
+
+int _tmain(int argc, TCHAR* argv[])
+{
+#if 1
+	TCHAR search_directory[MAX_PATH];
+	wcscpy(search_directory, TEXT("C:\\Games\\Warlords Battlecry 3\\Assets"));
+
+	wcscpy(output_directory, argv[0]);
+	TCHAR* end = wcsrchr(output_directory, '\\');
+	end[1] = '\0';
+	wcscat(output_directory, TEXT("converted\\"));
+
+	wcstombs(mbs_output_directory, output_directory, MAX_PATH);
+#else
+	if (argc != 3)
+	{
+		_tprintf(TEXT("\nUsage: %s <search directory> <output directory>\n"), argv[0]);
+		return -1;
+	}
+
+	TCHAR search_directory[MAX_PATH];
+	wcscpy(search_directory, argv[1]);
+	wcscat(search_directory, "\\*");
+
+	TCHAR output_directory[MAX_PATH];
+	wcscpy(output_directory, argv[2]);
+#endif
+
+	process_dir(search_directory);
 
 	return 0;
 }
