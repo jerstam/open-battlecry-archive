@@ -87,22 +87,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\assets\shaders\blit.frag">
+    <None Include="shaders\post_effect.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\..\assets\shaders\fullscreen.vert">
+    <None Include="shaders\post_effect.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\..\assets\shaders\line.frag">
+    <None Include="shaders\line.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\..\assets\shaders\line.vert">
+    <None Include="shaders\line.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\..\assets\shaders\sprite.frag">
+    <None Include="shaders\sprite.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\..\assets\shaders\sprite.vert">
+    <None Include="shaders\sprite.vert">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>
