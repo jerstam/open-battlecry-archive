@@ -14,4 +14,4 @@ void renderer_init(void);
 void renderer_draw(void);
 void renderer_quit(void);
 
-void add_sprite(sprite_t)
+void add_sprite(sprite_t);

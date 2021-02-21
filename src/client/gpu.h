@@ -111,7 +111,7 @@ typedef struct gpu_t
     VkImage swapchain_images[MAX_SWAPCHAIN_IMAGES];
     VkImageView swapchain_image_views[MAX_SWAPCHAIN_IMAGES];
 
-    VkCommandPool graphics_command_pool[FRAME_COUNT];
+    VkCommandPool graphics_command_pools[FRAME_COUNT];
     VkCommandPool transfer_command_pool;
     VkCommandBuffer graphics_command_buffers[FRAME_COUNT];
     VkCommandBuffer transfer_command_buffer;

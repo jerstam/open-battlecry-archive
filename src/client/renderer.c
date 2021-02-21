@@ -9,14 +9,14 @@ enum
 	MAX_IMAGES = 3000,
 };
 
-static shader_t sprite_shader;
+static shader_t* sprite_shader;
 
 static u32 sprite_count;
 static sprite_t sprites[MAX_SPRITES];
 
-static image_t images[MAX_IMAGES];
-static descriptor_set_t descriptor_set_images;
-static descriptor_set_t descriptor_set_buffer;
+static image_t* images[MAX_IMAGES];
+static descriptor_set_t* descriptor_set_images;
+static descriptor_set_t* descriptor_set_buffer;
 
 void renderer_init(void)
 {

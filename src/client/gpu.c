@@ -511,7 +511,10 @@ static void create_command_pools()
 		.queueFamilyIndex = gpu.graphics_queue_index,
 		.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
 	};
-	VK_CHECK(vkCreateCommandPool(gpu.device, &command_pool_info, NULL, &gpu.graphics_command_pool));
+	for (i32 i = 0; i < FRAME_COUNT; i++)
+	{
+		VK_CHECK(vkCreateCommandPool(gpu.device, &command_pool_info, NULL, &gpu.graphics_command_pools[i]));
+	}
 	command_pool_info.queueFamilyIndex = gpu.transfer_queue_index;
 	VK_CHECK(vkCreateCommandPool(gpu.device, &command_pool_info, NULL, &gpu.transfer_command_pool));
 }
@@ -585,14 +588,13 @@ void gpu_quit()
 	vkDestroySampler(gpu.device, gpu.nearest_clamp_sampler, NULL);
 	vkDestroySampler(gpu.device, gpu.linear_clamp_sampler, NULL);
 
-	vkDestroyCommandPool(gpu.device, gpu.transfer_command_pool, NULL);
-	vkDestroyCommandPool(gpu.device, gpu.graphics_command_pool, NULL);
-
 	destroy_pipeline_cache();
 
+	vkDestroyCommandPool(gpu.device, gpu.transfer_command_pool, NULL);
 	vkDestroySemaphore(gpu.device, gpu.image_acquired_semaphore, NULL);
 	for (uint32_t i = 0; i < FRAME_COUNT; ++i)
 	{
+		vkDestroyCommandPool(gpu.device, gpu.graphics_command_pools[i], NULL);
 		vkDestroySemaphore(gpu.device, gpu.render_complete_semaphores[i], NULL);
 		vkDestroyFence(gpu.device, gpu.render_complete_fences[i], NULL);
 	}
@@ -639,7 +641,7 @@ void gpu_begin_frame(void)
 	VK_CHECK(vkResetFences(gpu.device, 1, &render_complete_fence));
 
 	// Reset commands
-	VK_CHECK(vkResetCommandPool(gpu.device, gpu.graphics_command_pool, 0));
+	VK_CHECK(vkResetCommandPool(gpu.device, gpu.graphics_command_pools[gpu.frame_index], 0));
 
 	// Record commands
 	VkCommandBuffer command_buffer = gpu.graphics_command_buffers[gpu.frame_index];
