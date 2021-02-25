@@ -92,29 +92,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\atomic.c" />
     <ClCompile Include="..\cvar.c" />
     <ClCompile Include="..\hash.c" />
     <ClCompile Include="..\hash_map.c" />
     <ClCompile Include="..\jobs.c" />
     <ClCompile Include="..\log.c" />
-    <ClCompile Include="..\os_windows.c" />
+    <ClCompile Include="..\os.c" />
     <ClCompile Include="..\pool.c" />
     <ClCompile Include="..\random.c" />
     <ClCompile Include="client_windows.c" />
-    <ClCompile Include="font_arial_32.c" />
-    <ClCompile Include="gpu.c" />
-    <ClCompile Include="gpu_buffer.c" />
-    <ClCompile Include="gpu_memory.c" />
+    <ClCompile Include="fonts\arial_32.h" />
+    <ClCompile Include="render.c" />
     <ClCompile Include="graphics.c" />
     <ClCompile Include="input.c" />
     <ClCompile Include="main.c" />
-    <ClCompile Include="renderer.c" />
     <ClCompile Include="resource.c" />
     <ClCompile Include="volk.c" />
     <ClCompile Include="window.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\animation.h" />
+    <ClInclude Include="..\atomic.h" />
     <ClInclude Include="..\cvar.h" />
     <ClInclude Include="..\hash.h" />
     <ClInclude Include="..\hash_map.h" />
@@ -125,9 +124,8 @@
     <ClInclude Include="..\pool.h" />
     <ClInclude Include="..\random.h" />
     <ClInclude Include="font.h" />
-    <ClInclude Include="gpu.h" />
+    <ClInclude Include="render.h" />
     <ClInclude Include="input.h" />
-    <ClInclude Include="renderer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="volk.h" />

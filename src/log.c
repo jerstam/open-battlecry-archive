@@ -2,6 +2,7 @@
 #include "os.h"
 
 #if defined(PLATFORM_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #endif
 #include <stdio.h>

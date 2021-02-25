@@ -60,6 +60,11 @@ bool window_should_close(void)
     return glfwWindowShouldClose(window);
 }
 
+void window_size(u32* width, u32* height)
+{
+    glfwGetFramebufferSize(window, width, height);
+}
+
 void window_poll_events(void)
 {
     glfwPollEvents();

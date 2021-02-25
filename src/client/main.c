@@ -1,5 +1,5 @@
 #include "window.h"
-#include "renderer.h"
+#include "render.h"
 #include "resource.h"
 #include "../os.h"
 #include "../log.h"
@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	log_init("battlecry.log");
     cvar_load();
 	window_init();
-    renderer_init();
+    render_init();
 
 	const double ticks_to_ms = (double)(1.0 / os_time_frequency());
 
@@ -34,10 +34,10 @@ int main(int argc, char* argv[])
 			return;
 		}
 
-		renderer_draw();
+		render_frame();
 	}
 
-	renderer_quit();
+	render_quit();
 	window_quit();
 	log_quit();
 	return 0;

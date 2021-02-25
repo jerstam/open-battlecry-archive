@@ -1,26 +1,14 @@
 #include "os.h"
 
+#if defined(PLATFORM_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#endif
 #include <assert.h>
 
 enum
 {
     DEFAULT_SPIN_COUNT = 1500
-};
-
-struct thread_t
-{
-    HANDLE handle;
-};
-
-struct mutex_t
-{
-    CRITICAL_SECTION handle;
-};
-
-struct condition_t
-{
-    CONDITION_VARIABLE handle;
 };
 
 static i64 timer_frequency;
@@ -81,10 +69,19 @@ void os_destroy_thread(thread_t thread)
     threads[thread] = threads[last];
 }
 
+void os_wait_thread(thread_t thread)
+{
+    assert(thread > 0);
+    HANDLE handle = threads[thread];
+    assert(handle);
+    WaitForSingleObject(handle, INFINITE);
+}
+
 mutex_t os_create_mutex()
 {
     CRITICAL_SECTION handle;
-    InitializeCriticalSectionAndSpinCount(&handle, DEFAULT_SPIN_COUNT);
+    if (!InitializeCriticalSectionAndSpinCount(&handle, DEFAULT_SPIN_COUNT))
+        assert(0);
 
     u8 index = ++mutex_count;
     mutexes[index] = handle;
@@ -139,7 +136,7 @@ void os_wake_condition(condition_t condition)
     WakeConditionVariable(&handle);
 }
 
-void os_wak_all_condition(condition_t condition)
+void os_wake_all_condition(condition_t condition)
 {
     assert(condition > 0);
     CONDITION_VARIABLE handle = conditions[condition];

@@ -2,13 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="client_windows.c" />
-    <ClCompile Include="font_arial_32.c" />
-    <ClCompile Include="gpu.c" />
-    <ClCompile Include="gpu_buffer.c" />
+    <ClCompile Include="render.c" />
     <ClCompile Include="graphics.c" />
     <ClCompile Include="input.c" />
     <ClCompile Include="main.c" />
-    <ClCompile Include="renderer.c" />
     <ClCompile Include="resource.c" />
     <ClCompile Include="volk.c" />
     <ClCompile Include="window.c" />
@@ -27,7 +24,7 @@
     <ClCompile Include="..\log.c">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\os_windows.c">
+    <ClCompile Include="..\os.c">
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\pool.c">
@@ -36,13 +33,17 @@
     <ClCompile Include="..\random.c">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="gpu_memory.c" />
+    <ClCompile Include="fonts\arial_32.h">
+      <Filter>fonts</Filter>
+    </ClCompile>
+    <ClCompile Include="..\atomic.c">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font.h" />
-    <ClInclude Include="gpu.h" />
+    <ClInclude Include="render.h" />
     <ClInclude Include="input.h" />
-    <ClInclude Include="renderer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="volk.h" />
@@ -77,6 +78,9 @@
     <ClInclude Include="..\random.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="..\atomic.h">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">
@@ -84,6 +88,9 @@
     </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{17bca69d-084b-4d22-b5f4-08056e4417b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fonts">
+      <UniqueIdentifier>{773785de-d524-44d5-8580-8a12e63171e6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

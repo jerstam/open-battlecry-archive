@@ -58,6 +58,12 @@ static_assert(sizeof(u64) == 8, "sizeof(u64) must be 8");
 #define UINT32_MAX       0xffffffffui32
 #define UINT64_MAX       0xffffffffffffffffui64
 
+#ifdef _MSC_VER
+	#define ALIGNAS(x) __declspec( align( x ) ) 
+#else
+	#define ALIGNAS(x)  __attribute__ ((aligned( x )))
+#endif
+
 enum
 {
 	MAX_THREADS = 256

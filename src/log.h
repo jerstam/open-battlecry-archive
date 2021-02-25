@@ -17,7 +17,7 @@ void log_quit(void);
 void log_print(log_type_t log_type, const char* message, ...);
 
 #define log_info(...) log_print(LOG_TYPE_INFO, __VA_ARGS__)
-#define log_error(...) log_print(LOG_TYPE_ERROR, FILE_LINE, __VA_ARGS__)
+#define log_error(...) log_print(LOG_TYPE_ERROR, __VA_ARGS__)
 
 #ifdef _DEBUG
 #define log_debug(...) log_print(LOG_TYPE_DEBUG, FILE_LINE __VA_ARGS__)
