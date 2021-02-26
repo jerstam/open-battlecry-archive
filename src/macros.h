@@ -72,6 +72,8 @@ enum
 typedef struct { u16 index; u16 generation; } handle_t;
 
 #define array_length(x) ( sizeof(x) / sizeof((x)[0]) )
+#define ALIGN(val, align) ((val) + ((val) % align ? align - (val) % align : 0))
+#define ALIGN_POW2(val, align) (((val) + (align - 1)) & align)
 
 typedef float vec2_t[2];
 

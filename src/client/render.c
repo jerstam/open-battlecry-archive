@@ -28,8 +28,9 @@ enum
 	MAX_SPRITES = UINT16_MAX,
 
 	// Memory
-	DEVICE_LOCAL_MEMORY_SIZE = MAX_SPRITES * sizeof(u16),
-	HOST_VISIBLE_MEMORY_SIZE = MAX_SPRITES * sizeof(u16),
+	INDEX_BUFFER_SIZE = MAX_SPRITES * 6 * sizeof(u16),
+	DEVICE_LOCAL_MEMORY_SIZE = ALIGN(INDEX_BUFFER_SIZE, 256),
+	HOST_VISIBLE_MEMORY_SIZE = ALIGN(INDEX_BUFFER_SIZE, 256),
 
 	// Descriptors
 	MAX_SAMPLERS = 1024,
@@ -105,6 +106,7 @@ VkDeviceSize host_visible_memory_offset;
 static VkDeviceMemory device_local_memory;
 static VkDeviceMemory host_visible_memory;
 
+static VkBuffer staging_buffer;
 static VkBuffer sprite_index_buffer;
 static u16 sprite_indices[MAX_SPRITES * 6];
 
@@ -591,6 +593,9 @@ static void allocate_command_buffers()
 		allocate_info.commandPool = graphics_command_pools[i];
 		VK_CHECK(vkAllocateCommandBuffers(device, &allocate_info, &graphics_command_buffers[i]));
 	}
+
+	allocate_info.commandPool = transfer_command_pool;
+	VK_CHECK(vkAllocateCommandBuffers(device, &allocate_info, &transfer_command_buffer));
 }
 
 static void create_samplers()
@@ -947,10 +952,11 @@ void render_init()
 		int quad_index = i % 6;
 		sprite_indices[i] = quad_indices[quad_index] + instance_index * 4;
 	}
+	VkDeviceSize index_buffer_size = MAX_SPRITES * 6 * sizeof(sprite_indices[0]);
 
 	VkBufferCreateInfo buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = MAX_SPRITES * sizeof(sprite_indices[0]),
+		.size = index_buffer_size,
 		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE
 	};
@@ -964,18 +970,71 @@ void render_init()
 	device_local_memory_offset += memory_requirements.size;
 
 	// Staging buffer
-	VkBuffer staging_buffer;
 	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	VK_CHECK(vkCreateBuffer(device, &buffer_info, NULL, &staging_buffer));
 
 	vkGetBufferMemoryRequirements(device, staging_buffer, &memory_requirements);
 	assert((memory_requirements.memoryTypeBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0);
 
+	VkDeviceSize memory_offset = host_visible_memory_offset;
 	VK_CHECK(vkBindBufferMemory(device, staging_buffer, host_visible_memory, host_visible_memory_offset));
 	host_visible_memory_offset += memory_requirements.size;
 
+	// Map
+	void* staging_ptr = NULL;
+	VK_CHECK(vkMapMemory(device, host_visible_memory, memory_offset, memory_requirements.size, 0, &staging_ptr));
+
+	memcpy(staging_ptr, sprite_indices, memory_requirements.size);
+
+	VkMappedMemoryRange memory_range = {
+		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+		.memory = host_visible_memory,
+		.offset = memory_offset,
+		.size = memory_requirements.size
+	};
+	VK_CHECK(vkFlushMappedMemoryRanges(device, 1, &memory_range));
+
+	vkUnmapMemory(device, host_visible_memory);
+
 	// Copy
-	vkCmdCopyBuffer(graphics_command_buffers[0], staging_buffer, sprite_index_buffer, );
+	VkCommandBufferBeginInfo begin_info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+	};
+	VK_CHECK(vkBeginCommandBuffer(transfer_command_buffer, &begin_info));
+
+	VkBufferCopy buffer_copy = {
+		.srcOffset = 0,
+		.dstOffset = memory_offset,
+		.size = index_buffer_size
+	};
+	vkCmdCopyBuffer(transfer_command_buffer, staging_buffer, sprite_index_buffer, 1, &buffer_copy);
+
+	VkBufferMemoryBarrier memory_barrier = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+		.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_INDEX_READ_BIT,
+		.srcQueueFamilyIndex = transfer_queue_index,
+		.dstQueueFamilyIndex = graphics_queue_index,
+		.buffer = sprite_index_buffer,
+		.offset = memory_offset,
+		.size = index_buffer_size
+	};
+	vkCmdPipelineBarrier(transfer_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+		0, 0, NULL, 1, &memory_barrier, 0, NULL);
+
+	VK_CHECK(vkEndCommandBuffer(transfer_command_buffer));
+
+	// Submit
+	VkSubmitInfo submit_info = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &transfer_command_buffer
+	};
+	VK_CHECK(vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE));
+
+	// TODO: Use a fence in submit instead
+	VK_CHECK(vkDeviceWaitIdle(device));
 
 	log_info("GPU initialized");
 }
@@ -1003,6 +1062,7 @@ void render_quit()
 	vkDeviceWaitIdle(device);
 
 	vkDestroyBuffer(device, sprite_index_buffer, NULL);
+	vkDestroyBuffer(device, staging_buffer, NULL);
 
 	vkFreeMemory(device, host_visible_memory, NULL);
 	vkFreeMemory(device, device_local_memory, NULL);
