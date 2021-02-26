@@ -1,26 +1,24 @@
 #version 450
 
 layout (location = 0) out vec2 out_TexCoord;
-layout (location = 1) out vec4 out_Color;
-layout (location = 2) flat out int out_TextureIndex;
+layout (location = 1) flat out int out_TextureIndex;
 
-struct Instance
+struct Sprite
 {
 	vec2 position;
 	float scale;
-    uint color;
-	int textureIndex;
+	uint textureIndex;
 }; 
 
-layout(std430, set = 0, binding = 0) readonly buffer InstanceBuffer
+layout(std430, set = 0, binding = 0) readonly buffer SpriteBuffer
 {   
-	Instance instances[];
+	Sprite sprites[];
 };
 
 layout (std430, push_constant) uniform Constants
 {
-    vec2 offset;
-    vec2 size;
+    vec2 cameraPosition;
+    vec2 cameraSize;
 } constants;
 
 const vec4 vertices[4] = vec4[4](
@@ -47,9 +45,9 @@ void main()
     float instanceScale = instances[instanceIndex].scale;
     uint instanceColor = instances[instanceIndex].color;
 
-	vec2 position = vertex.xy * instanceScale * constants.size + instancePosition * constants.size + constants.offset;
+	vec2 position = vertex.xy * instanceScale * constants.cameraSize + instancePosition * constants.cameraSize + constants.cameraPosition;
 	gl_Position = vec4(position, 0.0f, 1.0f);
 	out_TexCoord = vertex.zw;
-    out_Color = unpack_color(instanceColor);
+    //out_Color = unpack_color(instanceColor);
 	out_TextureIndex = instances[instanceIndex].textureIndex;
 }

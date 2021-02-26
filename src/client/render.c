@@ -25,6 +25,11 @@ enum
 	// Limits
 	MAX_PHYSICAL_DEVICES = 4,
 	MAX_SWAPCHAIN_IMAGES = 3,
+	MAX_SPRITES = UINT16_MAX,
+
+	// Memory
+	DEVICE_LOCAL_MEMORY_SIZE = MAX_SPRITES * sizeof(u16),
+	HOST_VISIBLE_MEMORY_SIZE = MAX_SPRITES * sizeof(u16),
 
 	// Descriptors
 	MAX_SAMPLERS = 1024,
@@ -81,8 +86,8 @@ static u32 frame_index;
 static u32 swapchain_image_count;
 static u32 swapchain_image_index;
 
-static VkDescriptorPool descriptor_pool;
 static VkDescriptorSetLayout descriptor_set_layout;
+static VkDescriptorPool descriptor_pool;
 static VkDescriptorSet descriptor_set;
 
 static VkRenderPass draw_render_pass;
@@ -94,6 +99,14 @@ static VkShaderModule sprite_vertex_shader;
 static VkShaderModule sprite_fragment_shader;
 static VkPipeline sprite_pipeline;
 static VkPipelineLayout sprite_pipeline_layout;
+
+VkDeviceSize device_local_memory_offset;
+VkDeviceSize host_visible_memory_offset;
+static VkDeviceMemory device_local_memory;
+static VkDeviceMemory host_visible_memory;
+
+static VkBuffer sprite_index_buffer;
+static u16 sprite_indices[MAX_SPRITES * 6];
 
 static VkSampler linear_clamp_sampler;
 static VkSampler nearest_clamp_sampler;
@@ -109,9 +122,9 @@ static u32 free_storage_buffer_indices[MAX_STORAGE_BUFFERS];
 
 static cvar_t cv_enable_validation = {
 	.name = "gpu_validation",
-	.description = "Enables GPU validation (very slow).",
+	.description = "Enables GPU validation.",
 	.type = CVAR_TYPE_BOOL,
-	.bool_value = false
+	.bool_value = true
 };
 
 static cvar_t cv_gpu_index = {
@@ -606,25 +619,25 @@ static void create_descriptor_set()
 			.binding = 0,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = MAX_STORAGE_BUFFERS,
-			.stageFlags = VK_SHADER_STAGE_ALL
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
 		},
 		{
 			.binding = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 			.descriptorCount = MAX_SAMPLED_IMAGES,
-			.stageFlags = VK_SHADER_STAGE_ALL
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		},
 		{
 			.binding = 2,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 			.descriptorCount = MAX_STORAGE_IMAGES,
-			.stageFlags = VK_SHADER_STAGE_ALL
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		},
 		{
 			.binding = 3,
 			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
 			.descriptorCount = MAX_SAMPLERS,
-			.stageFlags = VK_SHADER_STAGE_ALL
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		}
 	};
 
@@ -632,16 +645,23 @@ static void create_descriptor_set()
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		.bindingCount = array_length(bindings),
 		.pBindings = bindings,
-		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
+		.flags = 0
 	};
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_set_layout));
 
 	VkDescriptorPoolSize pool_sizes[] =
 	{
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, MAX_SAMPLERS },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, MAX_SAMPLED_IMAGES },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_STORAGE_IMAGES },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_STORAGE_BUFFERS },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 }
 	};
 
 	VkDescriptorPoolCreateInfo descriptor_pool_info = {
@@ -851,11 +871,48 @@ void create_sprite_pipeline()
 	VK_CHECK(vkCreateGraphicsPipelines(device, pipeline_cache, 1, &pipeline_info, NULL, &sprite_pipeline));
 }
 
+static void allocate_memory()
+{
+	VkPhysicalDeviceMemoryProperties* memory_properties = &physical_device_memory_properties[physical_device_index];
+
+	bool device_local_found = false;
+	bool host_visible_found = false;
+	for (u32 i = 0; i < memory_properties->memoryTypeCount; ++i)
+	{
+		if (!device_local_found && (memory_properties->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)
+		{
+			VkMemoryAllocateInfo allocate_info = {
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.allocationSize = DEVICE_LOCAL_MEMORY_SIZE,
+				.memoryTypeIndex = i
+			};
+
+			VK_CHECK(vkAllocateMemory(device, &allocate_info, NULL, &device_local_memory));
+			device_local_found = true;
+		}
+
+		if (!host_visible_found && (memory_properties->memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0)
+		{
+			VkMemoryAllocateInfo allocate_info = {
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.allocationSize = HOST_VISIBLE_MEMORY_SIZE,
+				.memoryTypeIndex = i
+			};
+
+			VK_CHECK(vkAllocateMemory(device, &allocate_info, NULL, &host_visible_memory));
+
+			host_visible_found = true;
+		}
+	}
+}
+
 void render_init()
 {
 	cvar_register(&cv_enable_validation);
 	cvar_register(&cv_gpu_index);
 	cvar_register(&cv_vsync);
+
+	window_size(&width, &height);
 
 	clear_value.color = (VkClearColorValue){
 		.float32 = { 0.1f, 0.2f, 0.3f, 1.0f }
@@ -879,6 +936,46 @@ void render_init()
 	create_render_passes();
 	create_pipeline_cache();
 	create_sprite_pipeline();
+	allocate_memory();
+
+	// Sprite index buffer
+	const u16 quad_indices[6] = { 0, 1, 2, 0, 2, 3 };
+
+	for (u32 i = 0; i < MAX_SPRITES * 6; i++)
+	{
+		int instance_index = i / 6;
+		int quad_index = i % 6;
+		sprite_indices[i] = quad_indices[quad_index] + instance_index * 4;
+	}
+
+	VkBufferCreateInfo buffer_info = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = MAX_SPRITES * sizeof(sprite_indices[0]),
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE
+	};
+	VK_CHECK(vkCreateBuffer(device, &buffer_info, NULL, &sprite_index_buffer));
+
+	VkMemoryRequirements memory_requirements = { 0 };
+	vkGetBufferMemoryRequirements(device, sprite_index_buffer, &memory_requirements);
+	assert((memory_requirements.memoryTypeBits & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0);
+
+	VK_CHECK(vkBindBufferMemory(device, sprite_index_buffer, device_local_memory, device_local_memory_offset));
+	device_local_memory_offset += memory_requirements.size;
+
+	// Staging buffer
+	VkBuffer staging_buffer;
+	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	VK_CHECK(vkCreateBuffer(device, &buffer_info, NULL, &staging_buffer));
+
+	vkGetBufferMemoryRequirements(device, staging_buffer, &memory_requirements);
+	assert((memory_requirements.memoryTypeBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0);
+
+	VK_CHECK(vkBindBufferMemory(device, staging_buffer, host_visible_memory, host_visible_memory_offset));
+	host_visible_memory_offset += memory_requirements.size;
+
+	// Copy
+	vkCmdCopyBuffer(graphics_command_buffers[0], staging_buffer, sprite_index_buffer, );
 
 	log_info("GPU initialized");
 }
@@ -905,10 +1002,17 @@ void render_quit()
 {
 	vkDeviceWaitIdle(device);
 
+	vkDestroyBuffer(device, sprite_index_buffer, NULL);
+
+	vkFreeMemory(device, host_visible_memory, NULL);
+	vkFreeMemory(device, device_local_memory, NULL);
+
 	destroy_pipeline_cache();
 
 	vkDestroyPipeline(device, sprite_pipeline, NULL);
 	vkDestroyPipelineLayout(device, sprite_pipeline_layout, NULL);
+	vkDestroyShaderModule(device, sprite_fragment_shader, NULL);
+	vkDestroyShaderModule(device, sprite_vertex_shader, NULL);
 
 	for (u32 i = 0; i < swapchain_image_count; i++)
 	{
@@ -916,7 +1020,6 @@ void render_quit()
 	}
 	vkDestroyRenderPass(device, draw_render_pass, NULL);
 
-	vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set);
 	vkDestroyDescriptorPool(device, descriptor_pool, NULL);
 	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
 
@@ -992,19 +1095,6 @@ void render_frame(void)
 		.pClearValues = &clear_value
 	};
 	vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
-	VkViewport viewport = {
-		.width = (float)width,
-		.height = (float)height,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f
-	};
-	vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-	VkRect2D scissor = {
-		.extent = (VkExtent2D) { width, height }
-	};
-	vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
 	vkCmdEndRenderPass(command_buffer);
 
