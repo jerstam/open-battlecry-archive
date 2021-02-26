@@ -108,10 +108,9 @@ fabric.properties
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
-
+*_d.exe
 
 # CMake ================================
 bin/
