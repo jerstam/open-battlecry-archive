@@ -7,19 +7,19 @@
 
 int main(int argc, char* argv[])
 {
-    os_init();
+	os_init();
 	log_init("battlecry.log");
-    cvar_load();
+	cvar_load();
 	window_init();
-    render_init();
+	render_init();
 
 	const double ticks_to_ms = (double)(1.0 / os_time_frequency());
 
 	bool quit = false;
-    u64 last_tick = os_tick();
+	u64 last_tick = os_tick();
 	while (!window_should_close())
 	{
-        u64 tick = os_tick();
+		u64 tick = os_tick();
 		float delta_time = (float)(tick * ticks_to_ms * 1000.0f);
 		last_tick = tick;
 

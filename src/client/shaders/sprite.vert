@@ -8,18 +8,18 @@ struct Sprite
 	vec2 position;
 	float scale;
 	uint textureIndex;
-}; 
-
+};   
+ 
 layout(std430, set = 0, binding = 0) readonly buffer SpriteBuffer
 {   
 	Sprite sprites[];
 };
-
+ 
 layout (std430, push_constant) uniform Constants
 {
     vec2 cameraPosition;
     vec2 cameraSize;
-} constants;
+} constants; 
 
 const vec4 vertices[4] = vec4[4](
     vec4(-0.5f, -0.5f, 0.0f, 0.0f),

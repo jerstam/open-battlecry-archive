@@ -12,7 +12,7 @@
 
 enum
 {
-	BUFFER_SIZE = 4096,
+	CHANGE_BUFFER_SIZE = 4096,
 	BUFFER_COUNT = 2
 };
 
@@ -36,7 +36,7 @@ static atomic64_t token_completed;
 static atomic64_t token_counter;
 static int next_set;
 static u64 current_tokens[3];
-static load_request_t requests[BUFFER_SIZE];
+static load_request_t requests[CHANGE_BUFFER_SIZE];
 static u32 request_count;
 
 static int loader_function(void* data)

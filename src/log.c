@@ -20,7 +20,7 @@
 
 enum
 {
-    BUFFER_SIZE = 4096
+    CHANGE_BUFFER_SIZE = 4096
 };
 
 typedef struct date_t
@@ -97,11 +97,11 @@ void log_print(log_type_t log_type, const char* message, ...)
 
     va_list args;
     va_start(args, message);
-    char input[BUFFER_SIZE];
+    char input[CHANGE_BUFFER_SIZE];
     vsnprintf(input, sizeof(input), message, args);
     va_end(args);
 
-    char console_output[BUFFER_SIZE];
+    char console_output[CHANGE_BUFFER_SIZE];
     snprintf(console_output, sizeof(console_output), "%s - %s\n", prefix, input);
 
     fprintf(log_type == LOG_TYPE_ERROR ? stderr : stdout, "%s", console_output);
