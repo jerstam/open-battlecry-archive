@@ -7,7 +7,7 @@ struct Sprite
 {
 	vec2 position;
 	float scale;
-	uint textureIndex;
+	int textureIndex;
 };   
  
 layout(std430, set = 0, binding = 0) readonly buffer SpriteBuffer
@@ -41,13 +41,13 @@ void main()
 	//float x = float(index & uint(1)) - 0.5f;
 	//float y = float(index / uint(2)) - 0.5f;
 	vec4 vertex = vertices[index];
-	vec2 instancePosition = instances[instanceIndex].position;
-    float instanceScale = instances[instanceIndex].scale;
-    uint instanceColor = instances[instanceIndex].color;
+	vec2 instancePosition = sprites[instanceIndex].position;
+    float instanceScale = sprites[instanceIndex].scale;
+    //uint instanceColor = sprites[instanceIndex].color;
 
 	vec2 position = vertex.xy * instanceScale * constants.cameraSize + instancePosition * constants.cameraSize + constants.cameraPosition;
 	gl_Position = vec4(position, 0.0f, 1.0f);
 	out_TexCoord = vertex.zw;
     //out_Color = unpack_color(instanceColor);
-	out_TextureIndex = instances[instanceIndex].textureIndex;
-}
+	out_TextureIndex = sprites[instanceIndex].textureIndex;
+} 
