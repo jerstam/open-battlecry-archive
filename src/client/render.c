@@ -790,10 +790,10 @@ void create_sprite_pipeline()
 
 	VkShaderModuleCreateInfo shader_info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 
-	shader_info.codeSize = sizeof(sprite_vert_spirv);
+	shader_info.codeSize = sprite_vert_size;
 	shader_info.pCode = sprite_vert_spirv;
 	VK_CHECK(vkCreateShaderModule(device, &shader_info, NULL, &sprite_vertex_shader));
-	shader_info.codeSize = sizeof(sprite_frag_spirv);
+	shader_info.codeSize = sprite_frag_size;
 	shader_info.pCode = sprite_frag_spirv;
 	VK_CHECK(vkCreateShaderModule(device, &shader_info, NULL, &sprite_fragment_shader));
 

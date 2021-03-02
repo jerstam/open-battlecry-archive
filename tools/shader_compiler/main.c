@@ -122,31 +122,6 @@ int main(int argc, char* argv[])
 
 	getchar();
 
-	/*DWORD file_attributes = GetFileAttributes(watch_path);
-	assert(file_attributes != INVALID_FILE_ATTRIBUTES);
-
-	directory = CreateFile(
-		watch_path,
-		FILE_LIST_DIRECTORY,
-		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-		NULL,
-		OPEN_EXISTING,
-		FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-		NULL);
-	assert(directory != INVALID_HANDLE_VALUE);
-
-	iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
-	assert(iocp);
-
-	close_event = CreateEvent(NULL, TRUE, FALSE, NULL);
-	assert(close_event);
-
-	watch_thread = CreateThread(0, 0, watch_directory, NULL, 0, 0);
-	assert(watch_thread);
-
-	WaitForSingleObject(watch_thread, INFINITE);
-	*/
-
 	dmon_unwatch(watch_id);
 	dmon_deinit();
 	shaderc_compiler_release(compiler);
