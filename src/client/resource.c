@@ -39,8 +39,9 @@ static u64 current_tokens[3];
 static load_request_t requests[CHANGE_BUFFER_SIZE];
 static u32 request_count;
 
-static int loader_function(void* data)
+static u32 loader_function(void* data)
 {
+	(void)data;
 	u64 max_token = 0;
 
 	while (run)
@@ -66,7 +67,7 @@ static int loader_function(void* data)
 		os_unlock_mutex(token_mutex);
 		os_wake_all_condition(token_cond);
 
-		u64 completion_mask = 0;
+		//u64 completion_mask = 0;
 
 		os_lock_mutex(queue_mutex);
 
@@ -89,13 +90,14 @@ static int loader_function(void* data)
 			assert(file);
 
 			fseek(file, 0, SEEK_END);
-			i64 size = ftell(file);
+			i64 file_size = ftell(file);
 			rewind(file);
 
-			u8* data = malloc(size);
-			fread(data, size, 1, file);
+			u8* resource_data = malloc(file_size);
+			assert(resource_data);
+			fread(resource_data, file_size, 1, file);
 
-			free(data);
+			free(resource_data);
 			fclose(file);
 
 			bool completed = true;

@@ -45,7 +45,7 @@ enum
 	MAX_STORAGE_BUFFERS = 1024,
 };
 
-static const swapchain_format = VK_FORMAT_B8G8R8A8_UNORM;
+static const u32 swapchain_format = VK_FORMAT_B8G8R8A8_UNORM;
 
 static VkExtensionProperties available_instance_extensions[32];
 static VkExtensionProperties available_device_extensions[256];
@@ -154,6 +154,8 @@ static VkBool32 VKAPI_PTR debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
+	(void)messageType;
+	(void)pUserData;
 	int32_t message_id_number = pCallbackData->messageIdNumber;
 	const char* message_id_name = pCallbackData->pMessageIdName;
 	const char* message = pCallbackData->pMessage;
@@ -268,8 +270,7 @@ static void create_instance()
 	log_info("Vulkan instance created");
 }
 
-static void find_queue_family(VkQueueFlags queue, u32 queue_family_count,
-	VkQueueFamilyProperties* queue_family_properties, uint8_t* queue_family)
+static void find_queue_family(VkQueueFlags queue, VkQueueFamilyProperties* queue_family_properties, uint8_t* queue_family)
 {
 	VkQueueFlags min_flags = ~0u;
 	u32 best_family = UINT32_MAX;
@@ -350,9 +351,9 @@ static void create_device()
 	VkQueueFamilyProperties queue_family_properties[4];
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
-	find_queue_family(VK_QUEUE_GRAPHICS_BIT, queue_family_count, queue_family_properties, &graphics_queue_index);
-	find_queue_family(VK_QUEUE_TRANSFER_BIT, queue_family_count, queue_family_properties, &transfer_queue_index);
-	find_queue_family(VK_QUEUE_COMPUTE_BIT, queue_family_count, queue_family_properties, &compute_queue_index);
+	find_queue_family(VK_QUEUE_GRAPHICS_BIT, queue_family_properties, &graphics_queue_index);
+	find_queue_family(VK_QUEUE_TRANSFER_BIT, queue_family_properties, &transfer_queue_index);
+	find_queue_family(VK_QUEUE_COMPUTE_BIT, queue_family_properties, &compute_queue_index);
 
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
@@ -756,7 +757,8 @@ static void create_pipeline_cache()
 			rewind(file);
 			data = malloc(size);
 			assert(data);
-			fread(data, sizeof(data), 1, file);
+
+			fread(data, size, 1, file);
 		}
 		fclose(file);
 	}
@@ -954,9 +956,9 @@ void render_init()
 
 	for (u32 i = 0; i < MAX_SPRITES * 6; i++)
 	{
-		int instance_index = i / 6;
-		int quad_index = i % 6;
-		sprite_indices[i] = quad_indices[quad_index] + instance_index * 4;
+		u32 instance_index = i / 6;
+		u32 quad_index = i % 6;
+		sprite_indices[i] = quad_indices[quad_index] + (u16)instance_index * 4;
 	}
 	VkDeviceSize index_buffer_size = MAX_SPRITES * 6 * sizeof(sprite_indices[0]);
 

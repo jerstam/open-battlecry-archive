@@ -7,6 +7,9 @@
 
 int main(int argc, char* argv[])
 {
+	(void)argc;
+	(void)argv;
+
 	os_init();
 	log_init("battlecry.log");
 	cvar_load();
@@ -15,7 +18,6 @@ int main(int argc, char* argv[])
 
 	const double ticks_to_ms = (double)(1.0 / os_time_frequency());
 
-	bool quit = false;
 	u64 last_tick = os_tick();
 	while (!window_should_close())
 	{

@@ -10,7 +10,7 @@ typedef u8 fiber_t;
 typedef u8 mutex_t;
 typedef u8 condition_t;
 
-typedef dword (*thread_function_t)(void*);
+typedef u32 (*thread_function_t)(void*);
 
 void os_init(void);
 

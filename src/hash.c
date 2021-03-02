@@ -196,5 +196,5 @@ static inline u64 xxh64_endian_align(const u8* input, size_t length, u64 seed)
 
 u32 hash32(const char* input, u64 length, u32 seed)
 {
-	return (u32)xxh64_endian_align(input, length, seed);
+	return (u32)xxh64_endian_align((u8*)input, length, seed);
 }

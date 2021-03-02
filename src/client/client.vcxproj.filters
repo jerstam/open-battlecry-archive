@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="client_windows.c" />
     <ClCompile Include="render.c" />
-    <ClCompile Include="graphics.c" />
     <ClCompile Include="input.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="resource.c" />

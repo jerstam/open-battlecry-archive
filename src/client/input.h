@@ -135,6 +135,7 @@ typedef struct mouse_t
     float y;
     float wheel;
     u8 buttons[MOUSE_BUTTON_COUNT];
+    bool double_click;
 } mouse_t;
 
 bool input_key(key_t key);
@@ -146,5 +147,3 @@ void input_set_mouse_button_down(mouse_button_t mouse_button);
 void input_set_mouse_button_up(mouse_button_t mouse_button);
 
 const char* input_key_name(key_t key);
-
-void input_show_cursor(bool show);

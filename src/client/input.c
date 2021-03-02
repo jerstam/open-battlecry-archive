@@ -73,7 +73,3 @@ const char* input_key_name(key_t key)
 {
 	return key_names[key];
 }
-
-void input_show_cursor(bool show)
-{
-}

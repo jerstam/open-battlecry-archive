@@ -15,7 +15,7 @@ void pool_init(pool_t* pool, u32 count)
 	pool->free_indices = malloc(pool->count * sizeof(u32));
 	assert(pool->free_indices);
 	for (i32 i = pool->count - 1; i >= 0; i--) {
-		pool->free_indices[pool->last++] = i;		
+		pool->free_indices[pool->last++] = (u16)i;		
 	}
 }
 
@@ -34,8 +34,8 @@ handle_t pool_get_handle(pool_t* pool)
 	assert(pool);
 	assert(pool->free_indices);
 	assert(pool->last > 0);
-	u32 index = pool->free_indices[--pool->last];
-	u32 generation = pool->generations[index];
+	u16 index = pool->free_indices[--pool->last];
+	u16 generation = pool->generations[index];
 	return (handle_t) { index, generation };
 }
 

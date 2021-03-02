@@ -47,7 +47,7 @@ i64 os_time_frequency(void)
 
 thread_t os_create_thread(thread_function_t function, void* data)
 {
-    HANDLE handle = CreateThread(0, 0, function, data, 0, 0);
+    HANDLE handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)function, data, 0, 0);
     assert(handle);
 
     u8 index = ++thread_count;

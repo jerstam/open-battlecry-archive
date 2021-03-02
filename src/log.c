@@ -39,6 +39,7 @@ static mutex_t mutex;
 
 void log_init(const char* file_name)
 {
+    (void)file_name;
     mutex = os_create_mutex();
 }
 
