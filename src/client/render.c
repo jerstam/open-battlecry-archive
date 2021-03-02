@@ -1,10 +1,16 @@
 #include "render.h"
 #include "window.h"
-#include "shaders.h"
 #include "../os.h"
 #include "../log.h"
 #include "../cvar.h"
 #include "volk.h"
+
+#include "shaders/line_vert.h"
+#include "shaders/line_frag.h"
+#include "shaders/sprite_vert.h"
+#include "shaders/sprite_frag.h"
+#include "shaders/post_effect_vert.h"
+#include "shaders/post_effect_frag.h"
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>

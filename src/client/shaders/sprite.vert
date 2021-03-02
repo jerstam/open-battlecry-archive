@@ -13,7 +13,7 @@ struct Sprite
 layout(std430, set = 0, binding = 0) readonly buffer SpriteBuffer
 {   
 	Sprite sprites[];
-};
+}; 
  
 layout (std430, push_constant) uniform Constants
 {

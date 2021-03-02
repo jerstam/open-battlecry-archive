@@ -45,7 +45,6 @@
     <ClInclude Include="render.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="shaders.h" />
     <ClInclude Include="volk.h" />
     <ClInclude Include="window.h" />
     <ClInclude Include="..\animation.h">
@@ -80,6 +79,24 @@
     </ClInclude>
     <ClInclude Include="..\atomic.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\line_frag.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\line_vert.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\post_effect_frag.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\post_effect_vert.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\sprite_frag.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\sprite_vert.h">
+      <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
