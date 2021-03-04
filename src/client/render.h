@@ -2,14 +2,6 @@
 
 #include "../macros.h"
 
-typedef struct sprite_draw_t
-{
-    float x, y;
-    float scale;
-    i32 image_index;
-    float r, g, b, a;
-} sprite_draw_t;
-
 void render_init(void);
 void render_quit(void);
 void render_frame(void);

@@ -38,6 +38,10 @@
     <ClCompile Include="..\atomic.c">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\memory.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="buffer_pool.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font.h" />
@@ -97,6 +101,10 @@
     <ClInclude Include="shaders\sprite_vert.h">
       <Filter>shaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\memory.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="buffer_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">

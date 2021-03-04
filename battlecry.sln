@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asset_converter", "tools\as
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shader_compiler", "tools\shader_compiler\shader_compiler.vcxproj", "{BA6FAD7E-F34E-4F6F-9991-518FB2CB27CC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asset_packer", "tools\asset_packer\asset_packer.vcxproj", "{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -33,6 +35,10 @@ Global
 		{BA6FAD7E-F34E-4F6F-9991-518FB2CB27CC}.Debug|x64.Build.0 = Debug|x64
 		{BA6FAD7E-F34E-4F6F-9991-518FB2CB27CC}.Release|x64.ActiveCfg = Release|x64
 		{BA6FAD7E-F34E-4F6F-9991-518FB2CB27CC}.Release|x64.Build.0 = Release|x64
+		{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}.Debug|x64.ActiveCfg = Debug|x64
+		{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}.Debug|x64.Build.0 = Debug|x64
+		{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}.Release|x64.ActiveCfg = Release|x64
+		{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

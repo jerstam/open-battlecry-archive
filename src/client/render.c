@@ -39,11 +39,18 @@ enum
 	HOST_VISIBLE_MEMORY_SIZE = ALIGN(INDEX_BUFFER_SIZE, 256),
 
 	// Descriptors
-	MAX_SAMPLERS = 1024,
+	MAX_SAMPLERS = 2,
 	MAX_SAMPLED_IMAGES = 10 * 1024,
-	MAX_STORAGE_IMAGES = 1024,
-	MAX_STORAGE_BUFFERS = 1024,
+	MAX_STORAGE_IMAGES = 8,
+	MAX_STORAGE_BUFFERS = 8,
 };
+
+typedef struct sprite_draw_t
+{
+	float x, y;
+	float scale;
+	i32 image_index;
+} sprite_draw_t;
 
 static const u32 swapchain_format = VK_FORMAT_B8G8R8A8_UNORM;
 
@@ -87,11 +94,18 @@ static VkCommandBuffer transfer_command_buffer;
 static VkFence render_complete_fences[FRAME_COUNT];
 static VkSemaphore image_acquired_semaphore;
 static VkSemaphore render_complete_semaphores[FRAME_COUNT];
+static VkFence transfer_complete_fence;
 
 static u32 frame_count;
 static u32 frame_index;
 static u32 swapchain_image_count;
 static u32 swapchain_image_index;
+
+static VkSampler linear_clamp_sampler;
+static VkSampler nearest_clamp_sampler;
+static VkDescriptorSetLayout sampler_descriptor_set_layout;
+static VkDescriptorPool sampler_descriptor_pool;
+static VkDescriptorSet sampler_descriptor_set;
 
 static VkDescriptorSetLayout descriptor_set_layout;
 static VkDescriptorPool descriptor_pool;
@@ -102,22 +116,23 @@ static VkRenderPass post_process_render_pass;
 static VkFramebuffer framebuffers[FRAME_COUNT];
 static VkClearValue clear_value;
 
-static VkShaderModule sprite_vertex_shader;
-static VkShaderModule sprite_fragment_shader;
-static VkPipeline sprite_pipeline;
-static VkPipelineLayout sprite_pipeline_layout;
-
 VkDeviceSize device_local_memory_offset;
 VkDeviceSize host_visible_memory_offset;
 static VkDeviceMemory device_local_memory;
 static VkDeviceMemory host_visible_memory;
 
+static u32 sprite_count = 100;
+static VkShaderModule sprite_vertex_shader;
+static VkShaderModule sprite_fragment_shader;
+static VkPipeline sprite_pipeline;
+static VkPipelineLayout sprite_pipeline_layout;
+
 static VkBuffer staging_buffer;
 static VkBuffer sprite_index_buffer;
 static u16 sprite_indices[MAX_SPRITES * 6];
 
-static VkSampler linear_clamp_sampler;
-static VkSampler nearest_clamp_sampler;
+static VkImage sprite_images[MAX_SPRITES];
+static VkImageView sprite_image_views[MAX_SPRITES];
 
 static u32 next_sampler_index;
 static u32 next_sampled_image_index;
@@ -355,6 +370,7 @@ static void create_device()
 	find_queue_family(VK_QUEUE_TRANSFER_BIT, queue_family_properties, &transfer_queue_index);
 	find_queue_family(VK_QUEUE_COMPUTE_BIT, queue_family_properties, &compute_queue_index);
 
+	// TODO: Disable features we don't need
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
@@ -570,6 +586,7 @@ static void create_synchronization(void)
 		VK_CHECK(vkCreateSemaphore(device, &semaphore_info, NULL, &render_complete_semaphores[i]));
 	}
 	VK_CHECK(vkCreateSemaphore(device, &semaphore_info, NULL, &image_acquired_semaphore));
+	VK_CHECK(vkCreateFence(device, &fence_info, NULL, &transfer_complete_fence));
 }
 
 static void create_command_pools()
@@ -615,17 +632,55 @@ static void create_samplers()
 		.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-		.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+		.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+		.maxLod = VK_LOD_CLAMP_NONE
 	};
 	VK_CHECK(vkCreateSampler(device, &sampler_info, NULL, &linear_clamp_sampler));
 
 	sampler_info.magFilter = VK_FILTER_NEAREST;
 	sampler_info.minFilter = VK_FILTER_NEAREST;
 	VK_CHECK(vkCreateSampler(device, &sampler_info, NULL, &nearest_clamp_sampler));
+
+	VkSampler samplers[2] = { nearest_clamp_sampler, linear_clamp_sampler };
+
+	VkDescriptorSetLayoutBinding binding = {
+		.binding = 0,
+		.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+		.descriptorCount = array_length(samplers),
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+		.pImmutableSamplers = samplers
+	};
+
+	VkDescriptorSetLayoutCreateInfo layout_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 1,
+		.pBindings = &binding,
+		.flags = 0
+	};
+	VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &sampler_descriptor_set_layout));
+
+	VkDescriptorPoolSize pool_size = { VK_DESCRIPTOR_TYPE_SAMPLER, 2 };
+
+	VkDescriptorPoolCreateInfo pool_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.poolSizeCount = 1,
+		.pPoolSizes = &pool_size,
+		.maxSets = 1
+	};
+	VK_CHECK(vkCreateDescriptorPool(device, &pool_info, NULL, &sampler_descriptor_pool));
+
+	VkDescriptorSetAllocateInfo allocate_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = sampler_descriptor_pool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &sampler_descriptor_set_layout
+	};
+	VK_CHECK(vkAllocateDescriptorSets(device, &allocate_info, &sampler_descriptor_set));
 }
 
 static void create_descriptor_set()
 {
+	// TODO: Check against DescriptorIndexingProperties max values
 	const VkDescriptorSetLayoutBinding bindings[] = {
 		{
 			.binding = 0,
@@ -635,57 +690,67 @@ static void create_descriptor_set()
 		},
 		{
 			.binding = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			.descriptorCount = MAX_SAMPLED_IMAGES,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		},
-		{
-			.binding = 2,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 			.descriptorCount = MAX_STORAGE_IMAGES,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		},
 		{
-			.binding = 3,
-			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-			.descriptorCount = MAX_SAMPLERS,
+			.binding = 2,
+			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			.descriptorCount = MAX_SAMPLED_IMAGES,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		}
+		},
+	};
+
+	const VkDescriptorBindingFlags binding_flags =
+		VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+		VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+		VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+
+	const VkDescriptorBindingFlags binding_flags_array[] = { 0, 0, binding_flags };
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+		.bindingCount = array_length(bindings),
+		.pBindingFlags = binding_flags_array
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.pNext = &binding_flags_info,
 		.bindingCount = array_length(bindings),
 		.pBindings = bindings,
-		.flags = 0
+		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
 	};
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, NULL, &descriptor_set_layout));
 
 	VkDescriptorPoolSize pool_sizes[] =
 	{
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, MAX_SAMPLERS },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, MAX_SAMPLED_IMAGES },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_STORAGE_IMAGES },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_STORAGE_BUFFERS },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1 },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 }
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_STORAGE_BUFFERS }
 	};
 
 	VkDescriptorPoolCreateInfo descriptor_pool_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT,
 		.poolSizeCount = array_length(pool_sizes),
 		.pPoolSizes = pool_sizes,
 		.maxSets = 1
 	};
 	VK_CHECK(vkCreateDescriptorPool(device, &descriptor_pool_info, NULL, &descriptor_pool));
 
+	u32 counts[] = { MAX_SAMPLED_IMAGES };
+	VkDescriptorSetVariableDescriptorCountAllocateInfo variable_count_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
+		.descriptorSetCount = 1,
+		.pDescriptorCounts = counts,
+	};
+
 	VkDescriptorSetAllocateInfo allocate_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.pNext = &variable_count_info,
 		.descriptorPool = descriptor_pool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &descriptor_set_layout
@@ -786,10 +851,12 @@ void create_sprite_pipeline()
 		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
 	};
 
+	VkDescriptorSetLayout set_layouts[] = { descriptor_set_layout, sampler_descriptor_set_layout };
+
 	VkPipelineLayoutCreateInfo layout_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 1,
-		.pSetLayouts = &descriptor_set_layout,
+		.setLayoutCount = array_length(set_layouts),
+		.pSetLayouts = set_layouts,
 		.pushConstantRangeCount = 1,
 		.pPushConstantRanges = (const VkPushConstantRange[]) { fragment_push_constant_range }
 	};
@@ -838,22 +905,10 @@ void create_sprite_pipeline()
 		.minSampleShading = 1.0f
 	};
 
-	VkViewport viewport = {
-		.width = (float)width,
-		.height = (float)height,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f
-	};
-
-	VkRect2D scissor = { 0 };
-	scissor.extent = (VkExtent2D){ width, height };
-
 	VkPipelineViewportStateCreateInfo viewport_state = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		.viewportCount = 1,
-		.pViewports = &viewport,
-		.scissorCount = 1,
-		.pScissors = &scissor
+		.scissorCount = 1
 	};
 
 	VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
@@ -868,6 +923,14 @@ void create_sprite_pipeline()
 		.pAttachments = &color_blend_attachment_state
 	};
 
+	VkDynamicState dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+	VkPipelineDynamicStateCreateInfo dynamic_state = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.dynamicStateCount = array_length(dynamic_states),
+		.pDynamicStates = dynamic_states
+	};
+
 	VkGraphicsPipelineCreateInfo pipeline_info = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.stageCount = 2,
@@ -878,6 +941,7 @@ void create_sprite_pipeline()
 		.pMultisampleState = &multisample_state,
 		.pColorBlendState = &color_blend_state,
 		.pViewportState = &viewport_state,
+		.pDynamicState = &dynamic_state,
 		.layout = sprite_pipeline_layout,
 		.renderPass = draw_render_pass,
 	};
@@ -919,38 +983,8 @@ static void allocate_memory()
 	}
 }
 
-void render_init()
+static void create_index_buffer()
 {
-	cvar_register(&cv_enable_validation);
-	cvar_register(&cv_gpu_index);
-	cvar_register(&cv_vsync);
-
-	window_size(&width, &height);
-
-	clear_value.color = (VkClearColorValue){
-		.float32 = { 0.1f, 0.2f, 0.3f, 1.0f }
-	};
-	clear_value.depthStencil = (VkClearDepthStencilValue){
-		.depth = 0.0f,
-		.stencil = 0
-	};
-
-	volkInitialize();
-	create_instance();
-	create_surface();
-	choose_physical_device();
-	create_device();
-	create_swapchain();
-	create_synchronization();
-	create_command_pools();
-	allocate_command_buffers();
-	create_samplers();
-	create_descriptor_set();
-	create_render_passes();
-	create_pipeline_cache();
-	create_sprite_pipeline();
-	allocate_memory();
-
 	// Sprite index buffer
 	const u16 quad_indices[6] = { 0, 1, 2, 0, 2, 3 };
 
@@ -1039,10 +1073,50 @@ void render_init()
 		.commandBufferCount = 1,
 		.pCommandBuffers = &transfer_command_buffer
 	};
-	VK_CHECK(vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE));
+	VK_CHECK(vkQueueSubmit(transfer_queue, 1, &submit_info, transfer_complete_fence));
 
-	// TODO: Use a fence in submit instead
-	VK_CHECK(vkDeviceWaitIdle(device));
+	VK_CHECK(vkWaitForFences(device, 1, &transfer_complete_fence, VK_TRUE, UINT64_MAX));
+	VK_CHECK(vkResetFences(device, 1, &transfer_complete_fence));
+}
+
+static void create_sprite_images()
+{
+
+}
+
+void render_init()
+{
+	cvar_register(&cv_enable_validation);
+	cvar_register(&cv_gpu_index);
+	cvar_register(&cv_vsync);
+
+	window_size(&width, &height);
+
+	clear_value.color = (VkClearColorValue){
+		.float32 = { 0.4f, 0.3f, 0.2f, 1.0f }
+	};
+	clear_value.depthStencil = (VkClearDepthStencilValue){
+		.depth = 0.0f,
+		.stencil = 0
+	};
+
+	volkInitialize();
+	create_instance();
+	create_surface();
+	choose_physical_device();
+	create_device();
+	create_swapchain();
+	create_synchronization();
+	create_command_pools();
+	allocate_command_buffers();
+	create_samplers();
+	create_descriptor_set();
+	create_render_passes();
+	create_pipeline_cache();
+	create_sprite_pipeline();
+	allocate_memory();
+	create_index_buffer();
+	create_sprite_images();
 
 	log_info("GPU initialized");
 }
@@ -1089,7 +1163,9 @@ void render_quit()
 	vkDestroyRenderPass(device, draw_render_pass, NULL);
 
 	vkDestroyDescriptorPool(device, descriptor_pool, NULL);
+	vkDestroyDescriptorPool(device, sampler_descriptor_pool, NULL);
 	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
+	vkDestroyDescriptorSetLayout(device, sampler_descriptor_set_layout, NULL);
 
 	vkDestroySampler(device, nearest_clamp_sampler, NULL);
 	vkDestroySampler(device, linear_clamp_sampler, NULL);
@@ -1100,6 +1176,7 @@ void render_quit()
 		vkDestroyCommandPool(device, graphics_command_pools[i], NULL);
 	}
 
+	vkDestroyFence(device, transfer_complete_fence, NULL);
 	vkDestroySemaphore(device, image_acquired_semaphore, NULL);
 	for (u32 i = 0; i < FRAME_COUNT; ++i)
 	{
@@ -1163,6 +1240,43 @@ void render_frame(void)
 		.pClearValues = &clear_value
 	};
 	vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+	
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline);
+
+	float cameraPositionSize[4] = { 0.0f, 0.0f, (float)width, (float)height };
+	vkCmdPushConstants(command_buffer, sprite_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, cameraPositionSize);
+
+	vkCmdBindIndexBuffer(command_buffer, sprite_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 0, 1, &descriptor_set, 0, NULL);
+	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 1, 1, &sampler_descriptor_set, 0, NULL);
+
+	for (u32 i = 0; i < sprite_count; i++) 
+	{
+		VkDescriptorImageInfo image_info = {
+			.imageView = sprite_image_views[i],
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
+
+		VkWriteDescriptorSet write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptor_set,
+			.dstBinding = 2,
+			.descriptorCount = 1,
+			.dstArrayElement = 0,
+			.pImageInfo = image_infos
+		};
+
+		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+	}
+
+	VkViewport viewport = { 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	VkRect2D scissor = { {0, 0}, {width, height} };
+
+	vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+	vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+	vkCmdDrawIndexed(command_buffer, sprite_count * 6, 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(command_buffer);
 
