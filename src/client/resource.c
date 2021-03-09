@@ -1,9 +1,9 @@
 #include "resource.h"
 #include "render.h"
-#include "../hash.h"
-#include "../os.h"
-#include "../log.h"
-#include "../atomic.h"
+#include "../core/hash.h"
+#include "../core/os.h"
+#include "../core/log.h"
+#include "../core/atomic.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 enum
 {
 	CHANGE_BUFFER_SIZE = 4096,
-	BUFFER_COUNT = 2
+	BUFFER_COUNT = 2,
 };
 
 typedef struct load_request_t
@@ -139,19 +139,28 @@ void resource_quit(void)
 	os_destroy_mutex(token_mutex);
 }
 
-void resource_add_buffer(buffer_t* buffer)
+void resource_load(const char* file_name, resource_t* resource)
 {
-	assert(buffer);
+	assert(file_name);
+	assert(resource);
+
+	char* dot = strrchr(file_name, '.');
+	assert(dot);
+	if (dot[1] == 'k')
+	{
+		resource->type = RESOURCE_TYPE_TEXTURE;
+	}
+
+	FILE* file = fopen(file_name, "rb");
+	assert(file);
+
+
+
+	fclose(file);
 }
 
-void resource_remove_buffer(buffer_t* buffer)
+void resource_add_image(const char* name)
 {
-	assert(buffer);
-}
-
-void resource_add_image(const char* name, image_t* image)
-{
-	assert(image);
 	os_lock_mutex(queue_mutex);
 
 	u64 token = atomic64_add(&token_counter, 1) + 1;
@@ -165,9 +174,4 @@ void resource_add_image(const char* name, image_t* image)
 
 	os_unlock_mutex(queue_mutex);
 	os_wake_condition(queue_cond);
-}
-
-void resource_remove_image(image_t* image)
-{
-	assert(image);
 }

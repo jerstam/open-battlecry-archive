@@ -3,11 +3,18 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="bc7.c" />
+    <ClCompile Include="volk.c" />
+    <ClCompile Include="png.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bc7.h" />
+    <ClInclude Include="bc7_encode.h" />
+    <ClInclude Include="bc7_try_mode_456.h" />
+    <ClInclude Include="volk.h" />
+    <ClInclude Include="png.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bc7_encode.comp" />
+    <None Include="bc7_try_mode_456.comp" />
   </ItemGroup>
 </Project>

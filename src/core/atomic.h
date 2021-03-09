@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros.h"
+#include "common.h"
 
 typedef volatile ALIGNAS(4) u32 atomic32_t;
 typedef volatile ALIGNAS(8) u64 atomic64_t;

@@ -94,16 +94,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\atomic.c" />
-    <ClCompile Include="..\cvar.c" />
-    <ClCompile Include="..\hash.c" />
-    <ClCompile Include="..\hash_map.c" />
-    <ClCompile Include="..\jobs.c" />
-    <ClCompile Include="..\log.c" />
-    <ClCompile Include="..\memory.c" />
-    <ClCompile Include="..\os.c" />
-    <ClCompile Include="..\pool.c" />
-    <ClCompile Include="..\random.c" />
     <ClCompile Include="buffer_pool.c" />
     <ClCompile Include="client_windows.c" />
     <ClCompile Include="fonts\arial_32.h" />
@@ -115,18 +105,6 @@
     <ClCompile Include="window.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\animation.h" />
-    <ClInclude Include="..\atomic.h" />
-    <ClInclude Include="..\cvar.h" />
-    <ClInclude Include="..\hash.h" />
-    <ClInclude Include="..\hash_map.h" />
-    <ClInclude Include="..\jobs.h" />
-    <ClInclude Include="..\log.h" />
-    <ClInclude Include="..\macros.h" />
-    <ClInclude Include="..\memory.h" />
-    <ClInclude Include="..\os.h" />
-    <ClInclude Include="..\pool.h" />
-    <ClInclude Include="..\random.h" />
     <ClInclude Include="buffer_pool.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="render.h" />

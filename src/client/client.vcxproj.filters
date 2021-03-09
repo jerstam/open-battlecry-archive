@@ -8,38 +8,8 @@
     <ClCompile Include="resource.c" />
     <ClCompile Include="volk.c" />
     <ClCompile Include="window.c" />
-    <ClCompile Include="..\cvar.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\hash.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\hash_map.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\jobs.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\log.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\os.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\pool.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\random.c">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="fonts\arial_32.h">
       <Filter>fonts</Filter>
-    </ClCompile>
-    <ClCompile Include="..\atomic.c">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\memory.c">
-      <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="buffer_pool.c" />
   </ItemGroup>
@@ -50,39 +20,6 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="volk.h" />
     <ClInclude Include="window.h" />
-    <ClInclude Include="..\animation.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\cvar.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hash.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hash_map.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\jobs.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\log.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\macros.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\os.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\pool.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\random.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\atomic.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="shaders\line_frag.h">
       <Filter>shaders</Filter>
     </ClInclude>
@@ -101,15 +38,9 @@
     <ClInclude Include="shaders\sprite_vert.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\memory.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="buffer_pool.h" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="common">
-      <UniqueIdentifier>{3bc953ad-1ed1-4a4b-aebf-2fb1def8ca5e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{17bca69d-084b-4d22-b5f4-08056e4417b1}</UniqueIdentifier>
     </Filter>

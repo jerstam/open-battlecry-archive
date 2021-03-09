@@ -1,9 +1,9 @@
 #include "window.h"
 #include "render.h"
 #include "resource.h"
-#include "../os.h"
-#include "../log.h"
-#include "../cvar.h"
+#include "../core/os.h"
+#include "../core/log.h"
+#include "../core/cvar.h"
 
 int main(int argc, char* argv[])
 {

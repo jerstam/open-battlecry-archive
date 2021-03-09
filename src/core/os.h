@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros.h"
+#include "common.h"
 
 #define INVALID_THREAD 0
 #define INVALID_MUTEX 0

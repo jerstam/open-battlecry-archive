@@ -1,8 +1,8 @@
 #include "render.h"
 #include "window.h"
-#include "../os.h"
-#include "../log.h"
-#include "../cvar.h"
+#include "../core/os.h"
+#include "../core/log.h"
+#include "../core/cvar.h"
 #include "volk.h"
 
 #include "shaders/line_vert.h"
@@ -220,7 +220,7 @@ static void create_instance()
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
 	};
-	u32 instance_extension_count = array_length(instance_extensions);
+	u32 instance_extension_count = ARRAY_LENGTH(instance_extensions);
 	if (!cv_enable_validation.bool_value) --instance_extension_count;
 
 	u32 available_extension_count = 0;
@@ -266,7 +266,7 @@ static void create_instance()
 		.ppEnabledExtensionNames = instance_extensions,
 #ifdef _DEBUG
 		.pNext = cv_enable_validation.bool_value ? &debug_info : NULL,
-		.enabledLayerCount = cv_enable_validation.bool_value ? array_length(validation_layers) : 0,
+		.enabledLayerCount = cv_enable_validation.bool_value ? ARRAY_LENGTH(validation_layers) : 0,
 		.ppEnabledLayerNames = validation_layers
 #endif
 	};
@@ -646,7 +646,7 @@ static void create_samplers()
 	VkDescriptorSetLayoutBinding binding = {
 		.binding = 0,
 		.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-		.descriptorCount = array_length(samplers),
+		.descriptorCount = ARRAY_LENGTH(samplers),
 		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 		.pImmutableSamplers = samplers
 	};
@@ -712,14 +712,14 @@ static void create_descriptor_set()
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-		.bindingCount = array_length(bindings),
+		.bindingCount = ARRAY_LENGTH(bindings),
 		.pBindingFlags = binding_flags_array
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		.pNext = &binding_flags_info,
-		.bindingCount = array_length(bindings),
+		.bindingCount = ARRAY_LENGTH(bindings),
 		.pBindings = bindings,
 		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
 	};
@@ -735,7 +735,7 @@ static void create_descriptor_set()
 	VkDescriptorPoolCreateInfo descriptor_pool_info = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT,
-		.poolSizeCount = array_length(pool_sizes),
+		.poolSizeCount = ARRAY_LENGTH(pool_sizes),
 		.pPoolSizes = pool_sizes,
 		.maxSets = 1
 	};
@@ -843,6 +843,24 @@ static void create_pipeline_cache()
 	log_info("Loaded Vulkan pipeline cache of %u bytes", size);
 }
 
+static void destroy_pipeline_cache()
+{
+	u64 pipeline_cache_size = 0;
+	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, NULL));
+	u8* pipeline_cache_data = malloc(pipeline_cache_size);
+	assert(pipeline_cache_data);
+	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, pipeline_cache_data));
+	if (pipeline_cache_size > 0)
+	{
+		FILE* file = fopen("pipeline.cache", "wb");
+		assert(file);
+		fwrite(pipeline_cache_data, pipeline_cache_size, 1, file);
+		fclose(file);
+	}
+	free(pipeline_cache_data);
+	vkDestroyPipelineCache(device, pipeline_cache, NULL);
+}
+
 void create_sprite_pipeline()
 {
 	VkPushConstantRange fragment_push_constant_range = {
@@ -855,7 +873,7 @@ void create_sprite_pipeline()
 
 	VkPipelineLayoutCreateInfo layout_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = array_length(set_layouts),
+		.setLayoutCount = ARRAY_LENGTH(set_layouts),
 		.pSetLayouts = set_layouts,
 		.pushConstantRangeCount = 1,
 		.pPushConstantRanges = (const VkPushConstantRange[]) { fragment_push_constant_range }
@@ -927,7 +945,7 @@ void create_sprite_pipeline()
 
 	VkPipelineDynamicStateCreateInfo dynamic_state = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.dynamicStateCount = array_length(dynamic_states),
+		.dynamicStateCount = ARRAY_LENGTH(dynamic_states),
 		.pDynamicStates = dynamic_states
 	};
 
@@ -1119,24 +1137,6 @@ void render_init()
 	create_sprite_images();
 
 	log_info("GPU initialized");
-}
-
-static void destroy_pipeline_cache()
-{
-	u64 pipeline_cache_size = 0;
-	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, NULL));
-	u8* pipeline_cache_data = malloc(pipeline_cache_size);
-	assert(pipeline_cache_data);
-	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, pipeline_cache_data));
-	if (pipeline_cache_size > 0)
-	{
-		FILE* file = fopen("pipeline.cache", "wb");
-		assert(file);
-		fwrite(pipeline_cache_data, pipeline_cache_size, 1, file);
-		fclose(file);
-	}
-	free(pipeline_cache_data);
-	vkDestroyPipelineCache(device, pipeline_cache, NULL);
 }
 
 void render_quit()

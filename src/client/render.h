@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../macros.h"
+#include "../core/common.h"
 
 void render_init(void);
 void render_quit(void);

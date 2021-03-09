@@ -44,7 +44,7 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0, rgba8ui) uniform readonly uimage2D g_Input; 
 
-layout(std430, set = 1, binding = 0) restrict writeonly buffer OutBuff
+layout(std430, set = 0, binding = 2) restrict writeonly buffer OutBuff
 {
   	uvec4 g_OutBuff[];  
 };

@@ -167,23 +167,6 @@ static void rle_to_png(const char* file_path, const rle_header_t* rle_header, co
 	int16_t width = rle_header->width;
 	int16_t height = rle_header->height;
 
-	/*uint8_t* palette_data = calloc(MAX_RLE_PALETTE * 3, 1);
-	assert(palette_data);
-
-	for (int i = 0; i < MAX_RLE_PALETTE; i++)
-	{
-		int16_t color = rle_header->palettes[0][i];
-		uint8_t r = convert_565_to_R(color);
-		uint8_t g = convert_565_to_G(color);
-		uint8_t b = convert_565_to_B(color);
-
-		palette_data[i * 3 + 2] = r;
-		palette_data[i * 3 + 1] = g;
-		palette_data[i * 3 + 0] = b;
-	}
-	stbi_write_bmp("palette.bmp", 16, 16, 3, palette_data);
-	free(palette_data);*/
-
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	assert(png_ptr);
 

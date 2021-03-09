@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros.h"
+#include "common.h"
 
 typedef struct pool_t {
 	u32 count;

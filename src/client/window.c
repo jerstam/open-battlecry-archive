@@ -1,5 +1,5 @@
 #include "window.h"
-#include "../cvar.h"
+#include "../core/cvar.h"
 
 #include <GLFW/glfw3.h>
 #include <assert.h>

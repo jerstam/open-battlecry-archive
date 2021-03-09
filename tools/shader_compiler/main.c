@@ -102,7 +102,7 @@ static void watch_callback(dmon_watch_id watch_id, dmon_action action,
 
 		const uint32_t u32_count = (uint32_t)(code_size / sizeof(uint32_t));
 
-		fprintf(file, "#pragma once\n\n#include \"../../macros.h\"\n\nconst u32 %s_spirv[%d] = {\n", shader_name, u32_count);
+		fprintf(file, "#pragma once\n\n#include \"../core/common.h\"\n\nconst u32 %s_spirv[%d] = {\n", shader_name, u32_count);
 		
 		for (uint32_t i = 0; i < u32_count;)
 		{

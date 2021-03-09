@@ -6,4 +6,4 @@
 
 void bc7_init(void);
 void bc7_quit(void);
-void bc7_encode(uint8_t* bc, const uint8_t* color);
+void bc7_compresss(uint32_t width, uint32_t height, uint8_t* image_data, uint64_t size);

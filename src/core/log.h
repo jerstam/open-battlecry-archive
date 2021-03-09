@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros.h"
+#include "common.h"
 
 #define _LINE_TOK(LINE) #LINE
 #define _LINE_TOK2(LINE) _LINE_TOK(LINE)

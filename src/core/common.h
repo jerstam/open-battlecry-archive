@@ -22,7 +22,7 @@
 #endif
 
 #ifdef _DEBUG
-    #define TRACY_ENABLE 1
+#define TRACY_ENABLE 1
 #endif
 
 typedef signed char i8;
@@ -59,9 +59,9 @@ static_assert(sizeof(u64) == 8, "sizeof(u64) must be 8");
 #define UINT64_MAX       0xffffffffffffffffui64
 
 #ifdef _MSC_VER
-	#define ALIGNAS(x) __declspec( align( x ) ) 
+#define ALIGNAS(x) __declspec( align( x ) ) 
 #else
-	#define ALIGNAS(x)  __attribute__ ((aligned( x )))
+#define ALIGNAS(x)  __attribute__ ((aligned( x )))
 #endif
 
 enum
@@ -71,7 +71,8 @@ enum
 
 typedef struct { u16 index; u16 generation; } handle_t;
 
-#define array_length(x) ( sizeof(x) / sizeof((x)[0]) )
+#define HANDLE_IS_VALID(h) ((h).index != UINT16_MAX)
+#define ARRAY_LENGTH(x) ( sizeof(x) / sizeof((x)[0]) )
 #define ALIGN(val, align) ((val) + ((val) % align ? align - (val) % align : 0))
 #define ALIGN_POW2(val, align) (((val) + (align - 1)) & align)
 
