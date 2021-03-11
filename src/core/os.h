@@ -3,7 +3,9 @@
 #include "common.h"
 
 #define INVALID_THREAD 0
+#define INVALID_FIBER 0
 #define INVALID_MUTEX 0
+#define INVALID_CONDITION 0
 
 typedef u8 thread_t;
 typedef u8 fiber_t;
@@ -26,10 +28,10 @@ void os_destroy_mutex(mutex_t mutex);
 void os_lock_mutex(mutex_t mutex);
 void os_unlock_mutex(mutex_t mutex);
 
-void os_init_condition(condition_t condition);
+condition_t os_create_condition(void);
 void os_wait_condition(condition_t condition, mutex_t mutex);
-void os_wake_condition(condition_t condition);
-void os_wake_all_condition(condition_t condition);
+void os_condition_wake_single(condition_t condition);
+void os_condition_wake_all(condition_t condition);
 
 u32 os_cpu_count(void);
 void os_sleep(u32 ms);

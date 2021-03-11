@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../macros.h"
+#include "../../core/common.h"
 
 const u32 line_frag_spirv[188] = {
 0x07230203,0x00010500,0x000d000a,0x0000000e,0x00000000,0x00020011,0x00000001,0x0006000b,

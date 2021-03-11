@@ -2,9 +2,21 @@
 
 #include "../core/common.h"
 
+typedef enum
+{
+    QUEUE_GRAPHICS = 1,
+    QUEUE_COMPUTE = 2,
+    QUEUE_TRANSFER = 4
+} queue_flags_t;
+
+typedef struct VkDevice_T* VkDevice;
+
 void render_init(void);
 void render_quit(void);
 void render_frame(void);
+
+VkDevice get_vulkan_device(void);
+u32 get_queue_family_index(queue_flags_t queue_type);
 
 // 
 // Buffer

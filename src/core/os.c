@@ -8,6 +8,9 @@
 
 enum
 {
+    MAX_MUTEXES = 256,
+    MAX_CONDITIONS = 256,
+
     DEFAULT_SPIN_COUNT = 1500
 };
 
@@ -17,8 +20,8 @@ static u8 thread_count;
 static u8 mutex_count;
 static u8 condition_count;
 static HANDLE threads[MAX_THREADS];
-static CRITICAL_SECTION mutexes[256];
-static CONDITION_VARIABLE conditions[256];
+static CRITICAL_SECTION mutexes[MAX_MUTEXES];
+static CONDITION_VARIABLE conditions[MAX_CONDITIONS];
 
 void os_init(void)
 {
@@ -47,6 +50,7 @@ i64 os_time_frequency(void)
 
 thread_t os_create_thread(thread_function_t function, void* data)
 {
+    assert(thread_count < MAX_THREADS);
     HANDLE handle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)function, data, 0, 0);
     assert(handle);
 
@@ -57,8 +61,7 @@ thread_t os_create_thread(thread_function_t function, void* data)
 
 void os_destroy_thread(thread_t thread)
 {
-    assert(thread > 0);
-
+    assert(thread != INVALID_THREAD);
     HANDLE handle = threads[thread];
     assert(handle);
 
@@ -71,7 +74,7 @@ void os_destroy_thread(thread_t thread)
 
 void os_wait_thread(thread_t thread)
 {
-    assert(thread > 0);
+    assert(thread != INVALID_THREAD);
     HANDLE handle = threads[thread];
     assert(handle);
     WaitForSingleObject(handle, INFINITE);
@@ -79,6 +82,7 @@ void os_wait_thread(thread_t thread)
 
 mutex_t os_create_mutex()
 {
+    assert(mutex_count < MAX_MUTEXES);
     CRITICAL_SECTION handle;
     if (!InitializeCriticalSectionAndSpinCount(&handle, DEFAULT_SPIN_COUNT))
         assert(0);
@@ -90,8 +94,7 @@ mutex_t os_create_mutex()
 
 void os_destroy_mutex(mutex_t mutex)
 {
-    assert(mutex > 0);
-
+    assert(mutex != INVALID_MUTEX);
     CRITICAL_SECTION handle = mutexes[mutex];
     DeleteCriticalSection(&handle);
 
@@ -101,44 +104,49 @@ void os_destroy_mutex(mutex_t mutex)
 
 void os_lock_mutex(mutex_t mutex)
 {
-    assert(mutex > 0);
+    assert(mutex != INVALID_MUTEX);
     CRITICAL_SECTION handle = mutexes[mutex];
     EnterCriticalSection(&handle);
 }
 
 void os_unlock_mutex(mutex_t mutex)
 {
-    assert(mutex > 0);
+    assert(mutex != INVALID_MUTEX);
     CRITICAL_SECTION handle = mutexes[mutex];
     LeaveCriticalSection(&handle);
 }
 
-void os_init_condition(condition_t condition)
+condition_t os_create_condition(void)
 {
-    assert(condition > 0);
-    CONDITION_VARIABLE handle = conditions[condition];
+    assert(condition_count < MAX_CONDITIONS);
+
+    CONDITION_VARIABLE handle;
     InitializeConditionVariable(&handle);
+
+    u8 index = ++condition_count;
+    conditions[index] = handle;
+    return index;
 }
 
 void os_wait_condition(condition_t condition, mutex_t mutex)
 {
-    assert(condition > 0);
-    assert(mutex > 0);
+    assert(condition != INVALID_CONDITION);
+    assert(mutex != INVALID_MUTEX);
     CONDITION_VARIABLE condition_handle = conditions[condition];
     CRITICAL_SECTION mutex_handle = mutexes[mutex];
     SleepConditionVariableCS(&condition_handle, &mutex_handle, UINT32_MAX);
 }
 
-void os_wake_condition(condition_t condition)
+void os_condition_wake_single(condition_t condition)
 {
-    assert(condition > 0);
+    assert(condition != INVALID_CONDITION);
     CONDITION_VARIABLE handle = conditions[condition];
     WakeConditionVariable(&handle);
 }
 
-void os_wake_all_condition(condition_t condition)
+void os_condition_wake_all(condition_t condition)
 {
-    assert(condition > 0);
+    assert(condition != INVALID_CONDITION);
     CONDITION_VARIABLE handle = conditions[condition];
     WakeAllConditionVariable(&handle);
 }

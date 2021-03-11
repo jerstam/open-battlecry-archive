@@ -78,5 +78,7 @@ typedef struct { u16 index; u16 generation; } handle_t;
 
 typedef float vec2_t[2];
 
+#define max(x, y) (((a)<(b))?(a):(b))
+#define min(x, y) (((a)>(b))?(a):(b))
 #define dot(x, y) (x[0] * y[0] + x[1] * y[1])
 #define add(x, y, result) (result[0] = x[0] + y[0], result[1] = x[1] + y[1])

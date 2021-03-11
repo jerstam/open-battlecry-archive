@@ -13,6 +13,8 @@
 #include "shaders/post_effect_frag.h"
 
 #include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -35,8 +37,6 @@ enum
 
 	// Memory
 	INDEX_BUFFER_SIZE = MAX_SPRITES * 6 * sizeof(u16),
-	DEVICE_LOCAL_MEMORY_SIZE = ALIGN(INDEX_BUFFER_SIZE, 256),
-	HOST_VISIBLE_MEMORY_SIZE = ALIGN(INDEX_BUFFER_SIZE, 256),
 
 	// Descriptors
 	MAX_SAMPLERS = 2,
@@ -73,11 +73,10 @@ static VkSurfaceKHR surface;
 static VkDevice device;
 
 static u32 queue_family_count;
+static VkQueueFamilyProperties queue_family_properties[4];
 static u8 graphics_queue_index;
-static u8 transfer_queue_index;
 static u8 compute_queue_index;
 static VkQueue graphics_queue;
-static VkQueue transfer_queue;
 static VkQueue compute_queue;
 
 static VkPipelineCache pipeline_cache;
@@ -87,14 +86,11 @@ static VkImage swapchain_images[MAX_SWAPCHAIN_IMAGES];
 static VkImageView swapchain_image_views[MAX_SWAPCHAIN_IMAGES];
 
 static VkCommandPool graphics_command_pools[FRAME_COUNT];
-static VkCommandPool transfer_command_pool;
 static VkCommandBuffer graphics_command_buffers[MAX_SWAPCHAIN_IMAGES];
-static VkCommandBuffer transfer_command_buffer;
 
 static VkFence render_complete_fences[FRAME_COUNT];
 static VkSemaphore image_acquired_semaphore;
 static VkSemaphore render_complete_semaphores[FRAME_COUNT];
-static VkFence transfer_complete_fence;
 
 static u32 frame_count;
 static u32 frame_index;
@@ -115,11 +111,6 @@ static VkRenderPass draw_render_pass;
 static VkRenderPass post_process_render_pass;
 static VkFramebuffer framebuffers[FRAME_COUNT];
 static VkClearValue clear_value;
-
-VkDeviceSize device_local_memory_offset;
-VkDeviceSize host_visible_memory_offset;
-static VkDeviceMemory device_local_memory;
-static VkDeviceMemory host_visible_memory;
 
 static u32 sprite_count = 100;
 static VkShaderModule sprite_vertex_shader;
@@ -165,6 +156,271 @@ static cvar_t cv_vsync = {
 	.flags = CVAR_SAVE
 };
 
+#ifdef _DEBUG
+static VkBool32 VKAPI_PTR debug_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+#endif
+static void create_instance(void);
+static void create_surface(void);
+static void choose_physical_device(void);
+static void create_device(void);
+static void create_swapchain(void);
+static void recreate_swapchain(void);
+static void create_synchronization(void);
+static void create_command_pools(void);
+static void allocate_command_buffers(void);
+static void create_samplers(void);
+static void create_descriptor_set(void);
+static void create_render_passes(void);
+static void create_pipeline_cache(void);
+static void destroy_pipeline_cache(void);
+static void create_sprite_pipeline(void);
+static void allocate_memory(void);
+static void create_index_buffer(void);
+
+void render_init()
+{
+	cvar_register(&cv_enable_validation);
+	cvar_register(&cv_gpu_index);
+	cvar_register(&cv_vsync);
+
+	window_size(&width, &height);
+
+	clear_value.color = (VkClearColorValue){
+		.float32 = { 0.4f, 0.3f, 0.2f, 1.0f }
+	};
+	clear_value.depthStencil = (VkClearDepthStencilValue){
+		.depth = 0.0f,
+		.stencil = 0
+	};
+
+	volkInitialize();
+	create_instance();
+	create_surface();
+	choose_physical_device();
+	create_device();
+	create_swapchain();
+	create_synchronization();
+	create_command_pools();
+	allocate_command_buffers();
+	create_samplers();
+	create_descriptor_set();
+	create_render_passes();
+	create_pipeline_cache();
+	create_sprite_pipeline();
+	allocate_memory();
+	create_index_buffer();
+	create_sprite_images();
+
+	log_info("GPU initialized");
+}
+
+void render_quit()
+{
+	vkDeviceWaitIdle(device);
+
+	vkDestroyBuffer(device, sprite_index_buffer, NULL);
+	vkDestroyBuffer(device, staging_buffer, NULL);
+
+	destroy_pipeline_cache();
+
+	vkDestroyPipeline(device, sprite_pipeline, NULL);
+	vkDestroyPipelineLayout(device, sprite_pipeline_layout, NULL);
+	vkDestroyShaderModule(device, sprite_fragment_shader, NULL);
+	vkDestroyShaderModule(device, sprite_vertex_shader, NULL);
+
+	for (u32 i = 0; i < swapchain_image_count; i++)
+	{
+		vkDestroyFramebuffer(device, framebuffers[i], NULL);
+	}
+	vkDestroyRenderPass(device, draw_render_pass, NULL);
+
+	vkDestroyDescriptorPool(device, descriptor_pool, NULL);
+	vkDestroyDescriptorPool(device, sampler_descriptor_pool, NULL);
+	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
+	vkDestroyDescriptorSetLayout(device, sampler_descriptor_set_layout, NULL);
+
+	vkDestroySampler(device, nearest_clamp_sampler, NULL);
+	vkDestroySampler(device, linear_clamp_sampler, NULL);
+
+	for (u32 i = 0; i < FRAME_COUNT; i++)
+	{
+		vkDestroyCommandPool(device, graphics_command_pools[i], NULL);
+	}
+
+	vkDestroySemaphore(device, image_acquired_semaphore, NULL);
+	for (u32 i = 0; i < FRAME_COUNT; ++i)
+	{
+		vkDestroySemaphore(device, render_complete_semaphores[i], NULL);
+		vkDestroyFence(device, render_complete_fences[i], NULL);
+	}
+
+	for (u32 i = 0; i < swapchain_image_count; i++)
+	{
+		vkDestroyImageView(device, swapchain_image_views[i], NULL);
+	}
+	vkDestroySwapchainKHR(device, swapchain, NULL);
+
+	vkDestroyDevice(device, NULL);
+
+	vkDestroySurfaceKHR(instance, surface, NULL);
+	if (debug_messenger != VK_NULL_HANDLE)
+		vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, NULL);
+	vkDestroyInstance(instance, NULL);
+}
+
+void render_frame(void)
+{
+	VkResult result;
+
+	// Acquire swapchain image
+	result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &swapchain_image_index);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		log_info("Swapchain incompatible with the surface, recreating...");
+		recreate_swapchain();
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		log_error("Failed to acquire swapchain image");
+		return;
+	}
+
+	// Wait until GPU is done rendering
+	VkFence render_complete_fence = render_complete_fences[frame_index];
+	VK_CHECK(vkWaitForFences(device, 1, &render_complete_fence, VK_TRUE, UINT64_MAX));
+	VK_CHECK(vkResetFences(device, 1, &render_complete_fence));
+
+	// Reset commands
+	VK_CHECK(vkResetCommandPool(device, graphics_command_pools[frame_index], 0));
+
+	// Record commands
+	VkCommandBuffer command_buffer = graphics_command_buffers[frame_index];
+	VkCommandBufferBeginInfo command_buffer_begin_info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+	};
+	VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
+
+	VkRenderPassBeginInfo render_pass_begin_info = {
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		.renderPass = draw_render_pass,
+		.framebuffer = framebuffers[swapchain_image_index],
+		.renderArea.extent = (VkExtent2D) { width, height },
+		.clearValueCount = 1,
+		.pClearValues = &clear_value
+	};
+	vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+	
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline);
+
+	float cameraPositionSize[4] = { 0.0f, 0.0f, (float)width, (float)height };
+	vkCmdPushConstants(command_buffer, sprite_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, cameraPositionSize);
+
+	vkCmdBindIndexBuffer(command_buffer, sprite_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 0, 1, &descriptor_set, 0, NULL);
+	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 1, 1, &sampler_descriptor_set, 0, NULL);
+
+	for (u32 i = 0; i < sprite_count; i++) 
+	{
+		// TODO: Update descriptors (buffers)
+		//VkDescriptorImageInfo image_info = {
+		//	.imageView = sprite_image_views[i],
+		//	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//};
+
+		//VkWriteDescriptorSet write = {
+		//	.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		//	.dstSet = descriptor_set,
+		//	.dstBinding = 2,
+		//	.descriptorCount = 1,
+		//	.dstArrayElement = 0,
+		//	.pImageInfo = image_infos
+		//};
+
+		//vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+	}
+
+	VkViewport viewport = { 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	VkRect2D scissor = { {0, 0}, {width, height} };
+
+	vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+	vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+	vkCmdDrawIndexed(command_buffer, sprite_count * 6, 1, 0, 0, 0);
+
+	vkCmdEndRenderPass(command_buffer);
+
+	VK_CHECK(vkEndCommandBuffer(command_buffer));
+
+	// Submit commands
+	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	VkSubmitInfo submit_info = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.pWaitDstStageMask = &wait_stage,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &image_acquired_semaphore,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = &render_complete_semaphores[frame_index],
+		.commandBufferCount = 1,
+		.pCommandBuffers = &command_buffer
+	};
+	VK_CHECK(vkQueueSubmit(graphics_queue, 1, &submit_info, render_complete_fence));
+
+	// Present 
+	VkPresentInfoKHR present_info = {
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &render_complete_semaphores[frame_index],
+		.swapchainCount = 1,
+		.pSwapchains = &swapchain,
+		.pImageIndices = &swapchain_image_index
+	};
+
+	result = vkQueuePresentKHR(graphics_queue, &present_info);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		log_info("Swapchain incompatible with the surface, recreating...");
+		recreate_swapchain();
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		log_error("Failed to present swapchain image");
+		return;
+	}
+
+	// Advance frame index
+	frame_index = (frame_index + 1) % FRAME_COUNT;
+}
+
+VkDevice get_vulkan_device(void)
+{
+	assert(device != VK_NULL_HANDLE);
+	return device;
+}
+
+u32 get_queue_family_index(queue_flags_t queue_type)
+{
+	VkQueueFlags min_flags = ~0u;
+	u32 best_family = UINT32_MAX;
+	for (u32 i = 0; i < queue_family_count; i++)
+	{
+		if ((queue_family_properties[i].queueFlags & queue_type) == queue_type)
+		{
+			if (queue_family_properties[i].queueFlags < min_flags)
+			{
+				min_flags = queue_family_properties[i].queueFlags;
+				best_family = i;
+			}
+		}
+	}
+	return best_family;
+}
+
+#ifdef _DEBUG
 static VkBool32 VKAPI_PTR debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -190,17 +446,18 @@ static VkBool32 VKAPI_PTR debug_callback(
 
 	return VK_FALSE;
 }
+#endif
 
 static void create_instance()
 {
-	VkApplicationInfo application_info = { 
+	VkApplicationInfo application_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = "Battlecry",
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 		.apiVersion = VK_API_VERSION_1_2
 	};
-	
+
 	const char* instance_extensions[] = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -285,27 +542,40 @@ static void create_instance()
 	log_info("Vulkan instance created");
 }
 
-static void find_queue_family(VkQueueFlags queue, VkQueueFamilyProperties* queue_family_properties, uint8_t* queue_family)
-{
-	VkQueueFlags min_flags = ~0u;
-	u32 best_family = UINT32_MAX;
-	for (u32 i = 0; i < queue_family_count; i++)
-	{
-		if ((queue_family_properties[i].queueFlags & queue) == queue)
-		{
-			if (queue_family_properties[i].queueFlags < min_flags)
-			{
-				min_flags = queue_family_properties[i].queueFlags;
-				best_family = i;
-			}
-		}
-	}
-	*queue_family = (uint8_t)best_family;
-}
-
 static void create_surface()
 {
-	VK_CHECK(glfwCreateWindowSurface(instance, window_get_handle(), NULL, &surface));
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+	VkWin32SurfaceCreateInfoKHR surface_info = {
+		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+		.hinstance = GetModuleHandle(NULL),
+		.hwnd = glfwGetWin32Window(window_get_handle())
+	};
+	VK_CHECK(vkCreateWin32SurfaceKHR(instance, &surface_info, NULL, &surface));
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+	VkXlibSurfaceCreateInfoKHR surface_info = {
+		.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+		.dpy = pDesc->mWindowHandle.display,      //TODO
+		.window = pDesc->mWindowHandle.window    //TODO
+	};
+	VK_CHECK(vkCreateXlibSurfaceKHR(instance, &surface_info, NULL, &surface));
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	VkXcbSurfaceCreateInfoKHR surface_info = {
+		.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
+		.connection = pDesc->mWindowHandle.connection,    //TODO
+		.window = pDesc->mWindowHandle.window        //TODO
+	};
+	VK_CHECK(vkCreateXcbSurfaceKHR(instance, &surface_info, NULL, &surface));
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+	// TODO: Add MacOS support
+#elif defined(VK_USE_PLATFORM_GGP)
+	extern VkResult ggpCreateSurface(VkInstance, VkSurfaceKHR * surface);
+	VK_CHECK(ggpCreateSurface(instance, &surface));
+#elif defined(VK_USE_PLATFORM_VI_NN)
+	extern VkResult nxCreateSurface(VkInstance, VkSurfaceKHR * surface);
+	VK_CHECK(nxCreateSurface(instance, &surface));
+#else
+#error PLATFORM NOT SUPPORTED
+#endif
 
 	log_info("Vulkan surface created");
 }
@@ -363,11 +633,9 @@ static void create_device()
 	VkPhysicalDevice physical_device = physical_devices[physical_device_index];
 
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
-	VkQueueFamilyProperties queue_family_properties[4];
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
 	find_queue_family(VK_QUEUE_GRAPHICS_BIT, queue_family_properties, &graphics_queue_index);
-	find_queue_family(VK_QUEUE_TRANSFER_BIT, queue_family_properties, &transfer_queue_index);
 	find_queue_family(VK_QUEUE_COMPUTE_BIT, queue_family_properties, &compute_queue_index);
 
 	// TODO: Disable features we don't need
@@ -453,7 +721,6 @@ static void create_device()
 	volkLoadDevice(device);
 
 	vkGetDeviceQueue(device, graphics_queue_index, 0, &graphics_queue);
-	vkGetDeviceQueue(device, transfer_queue_index, 0, &transfer_queue);
 	vkGetDeviceQueue(device, compute_queue_index, 0, &compute_queue);
 
 	log_info("Vulkan device created");
@@ -586,7 +853,6 @@ static void create_synchronization(void)
 		VK_CHECK(vkCreateSemaphore(device, &semaphore_info, NULL, &render_complete_semaphores[i]));
 	}
 	VK_CHECK(vkCreateSemaphore(device, &semaphore_info, NULL, &image_acquired_semaphore));
-	VK_CHECK(vkCreateFence(device, &fence_info, NULL, &transfer_complete_fence));
 }
 
 static void create_command_pools()
@@ -600,8 +866,6 @@ static void create_command_pools()
 	{
 		VK_CHECK(vkCreateCommandPool(device, &command_pool_info, NULL, &graphics_command_pools[i]));
 	}
-	command_pool_info.queueFamilyIndex = transfer_queue_index;
-	VK_CHECK(vkCreateCommandPool(device, &command_pool_info, NULL, &transfer_command_pool));
 }
 
 static void allocate_command_buffers()
@@ -617,9 +881,6 @@ static void allocate_command_buffers()
 		allocate_info.commandPool = graphics_command_pools[i];
 		VK_CHECK(vkAllocateCommandBuffers(device, &allocate_info, &graphics_command_buffers[i]));
 	}
-
-	allocate_info.commandPool = transfer_command_pool;
-	VK_CHECK(vkAllocateCommandBuffers(device, &allocate_info, &transfer_command_buffer));
 }
 
 static void create_samplers()
@@ -801,7 +1062,7 @@ static void create_render_passes()
 		.layers = 1
 	};
 
-	for (uint32_t i = 0; i < swapchain_image_count; i++) 
+	for (uint32_t i = 0; i < swapchain_image_count; i++)
 	{
 		framebuffer_info.pAttachments = &swapchain_image_views[i];
 		VK_CHECK(vkCreateFramebuffer(device, &framebuffer_info, NULL, &framebuffers[i]));
@@ -811,6 +1072,8 @@ static void create_render_passes()
 static void create_pipeline_cache()
 {
 	FILE* file = fopen("pipeline.cache", "rb");
+	assert(file);
+
 	u64 size = 0;
 	void* data = NULL;
 	if (file)
@@ -847,21 +1110,25 @@ static void destroy_pipeline_cache()
 {
 	u64 pipeline_cache_size = 0;
 	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, NULL));
-	u8* pipeline_cache_data = malloc(pipeline_cache_size);
-	assert(pipeline_cache_data);
-	VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, pipeline_cache_data));
+
 	if (pipeline_cache_size > 0)
 	{
+		u8* pipeline_cache_data = malloc(pipeline_cache_size);
+		assert(pipeline_cache_data);
+		VK_CHECK(vkGetPipelineCacheData(device, pipeline_cache, &pipeline_cache_size, pipeline_cache_data));
+
 		FILE* file = fopen("pipeline.cache", "wb");
 		assert(file);
+
 		fwrite(pipeline_cache_data, pipeline_cache_size, 1, file);
+
+		free(pipeline_cache_data);
 		fclose(file);
 	}
-	free(pipeline_cache_data);
 	vkDestroyPipelineCache(device, pipeline_cache, NULL);
 }
 
-void create_sprite_pipeline()
+static void create_sprite_pipeline()
 {
 	VkPushConstantRange fragment_push_constant_range = {
 		.size = sizeof(float) * 4,
@@ -1095,230 +1362,4 @@ static void create_index_buffer()
 
 	VK_CHECK(vkWaitForFences(device, 1, &transfer_complete_fence, VK_TRUE, UINT64_MAX));
 	VK_CHECK(vkResetFences(device, 1, &transfer_complete_fence));
-}
-
-static void create_sprite_images()
-{
-
-}
-
-void render_init()
-{
-	cvar_register(&cv_enable_validation);
-	cvar_register(&cv_gpu_index);
-	cvar_register(&cv_vsync);
-
-	window_size(&width, &height);
-
-	clear_value.color = (VkClearColorValue){
-		.float32 = { 0.4f, 0.3f, 0.2f, 1.0f }
-	};
-	clear_value.depthStencil = (VkClearDepthStencilValue){
-		.depth = 0.0f,
-		.stencil = 0
-	};
-
-	volkInitialize();
-	create_instance();
-	create_surface();
-	choose_physical_device();
-	create_device();
-	create_swapchain();
-	create_synchronization();
-	create_command_pools();
-	allocate_command_buffers();
-	create_samplers();
-	create_descriptor_set();
-	create_render_passes();
-	create_pipeline_cache();
-	create_sprite_pipeline();
-	allocate_memory();
-	create_index_buffer();
-	create_sprite_images();
-
-	log_info("GPU initialized");
-}
-
-void render_quit()
-{
-	vkDeviceWaitIdle(device);
-
-	vkDestroyBuffer(device, sprite_index_buffer, NULL);
-	vkDestroyBuffer(device, staging_buffer, NULL);
-
-	vkFreeMemory(device, host_visible_memory, NULL);
-	vkFreeMemory(device, device_local_memory, NULL);
-
-	destroy_pipeline_cache();
-
-	vkDestroyPipeline(device, sprite_pipeline, NULL);
-	vkDestroyPipelineLayout(device, sprite_pipeline_layout, NULL);
-	vkDestroyShaderModule(device, sprite_fragment_shader, NULL);
-	vkDestroyShaderModule(device, sprite_vertex_shader, NULL);
-
-	for (u32 i = 0; i < swapchain_image_count; i++)
-	{
-		vkDestroyFramebuffer(device, framebuffers[i], NULL);
-	}
-	vkDestroyRenderPass(device, draw_render_pass, NULL);
-
-	vkDestroyDescriptorPool(device, descriptor_pool, NULL);
-	vkDestroyDescriptorPool(device, sampler_descriptor_pool, NULL);
-	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, NULL);
-	vkDestroyDescriptorSetLayout(device, sampler_descriptor_set_layout, NULL);
-
-	vkDestroySampler(device, nearest_clamp_sampler, NULL);
-	vkDestroySampler(device, linear_clamp_sampler, NULL);
-
-	vkDestroyCommandPool(device, transfer_command_pool, NULL);
-	for (u32 i = 0; i < FRAME_COUNT; i++)
-	{
-		vkDestroyCommandPool(device, graphics_command_pools[i], NULL);
-	}
-
-	vkDestroyFence(device, transfer_complete_fence, NULL);
-	vkDestroySemaphore(device, image_acquired_semaphore, NULL);
-	for (u32 i = 0; i < FRAME_COUNT; ++i)
-	{
-		vkDestroySemaphore(device, render_complete_semaphores[i], NULL);
-		vkDestroyFence(device, render_complete_fences[i], NULL);
-	}
-
-	for (u32 i = 0; i < swapchain_image_count; i++)
-	{
-		vkDestroyImageView(device, swapchain_image_views[i], NULL);
-	}
-	vkDestroySwapchainKHR(device, swapchain, NULL);
-
-	vkDestroyDevice(device, NULL);
-
-	vkDestroySurfaceKHR(instance, surface, NULL);
-	if (debug_messenger != VK_NULL_HANDLE)
-		vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, NULL);
-	vkDestroyInstance(instance, NULL);
-}
-
-void render_frame(void)
-{
-	VkResult result;
-
-	// Acquire swapchain image
-	result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &swapchain_image_index);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR)
-	{
-		log_info("Swapchain incompatible with the surface, recreating...");
-		recreate_swapchain();
-	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-	{
-		log_error("Failed to acquire swapchain image");
-		return;
-	}
-
-	// Wait until GPU is done rendering
-	VkFence render_complete_fence = render_complete_fences[frame_index];
-	VK_CHECK(vkWaitForFences(device, 1, &render_complete_fence, VK_TRUE, UINT64_MAX));
-	VK_CHECK(vkResetFences(device, 1, &render_complete_fence));
-
-	// Reset commands
-	VK_CHECK(vkResetCommandPool(device, graphics_command_pools[frame_index], 0));
-
-	// Record commands
-	VkCommandBuffer command_buffer = graphics_command_buffers[frame_index];
-	VkCommandBufferBeginInfo command_buffer_begin_info = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-	};
-	VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
-
-	VkRenderPassBeginInfo render_pass_begin_info = {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.renderPass = draw_render_pass,
-		.framebuffer = framebuffers[swapchain_image_index],
-		.renderArea.extent = (VkExtent2D) { width, height },
-		.clearValueCount = 1,
-		.pClearValues = &clear_value
-	};
-	vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-	
-	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline);
-
-	float cameraPositionSize[4] = { 0.0f, 0.0f, (float)width, (float)height };
-	vkCmdPushConstants(command_buffer, sprite_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, cameraPositionSize);
-
-	vkCmdBindIndexBuffer(command_buffer, sprite_index_buffer, 0, VK_INDEX_TYPE_UINT16);
-
-	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 0, 1, &descriptor_set, 0, NULL);
-	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_pipeline_layout, 1, 1, &sampler_descriptor_set, 0, NULL);
-
-	for (u32 i = 0; i < sprite_count; i++) 
-	{
-		VkDescriptorImageInfo image_info = {
-			.imageView = sprite_image_views[i],
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		};
-
-		VkWriteDescriptorSet write = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = descriptor_set,
-			.dstBinding = 2,
-			.descriptorCount = 1,
-			.dstArrayElement = 0,
-			.pImageInfo = image_infos
-		};
-
-		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-	}
-
-	VkViewport viewport = { 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	VkRect2D scissor = { {0, 0}, {width, height} };
-
-	vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-	vkCmdSetScissor(command_buffer, 0, 1, &scissor);
-
-	vkCmdDrawIndexed(command_buffer, sprite_count * 6, 1, 0, 0, 0);
-
-	vkCmdEndRenderPass(command_buffer);
-
-	VK_CHECK(vkEndCommandBuffer(command_buffer));
-
-	// Submit commands
-	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	VkSubmitInfo submit_info = {
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pWaitDstStageMask = &wait_stage,
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &image_acquired_semaphore,
-		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &render_complete_semaphores[frame_index],
-		.commandBufferCount = 1,
-		.pCommandBuffers = &command_buffer
-	};
-	VK_CHECK(vkQueueSubmit(graphics_queue, 1, &submit_info, render_complete_fence));
-
-	// Present 
-	VkPresentInfoKHR present_info = {
-		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &render_complete_semaphores[frame_index],
-		.swapchainCount = 1,
-		.pSwapchains = &swapchain,
-		.pImageIndices = &swapchain_image_index
-	};
-
-	result = vkQueuePresentKHR(graphics_queue, &present_info);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR)
-	{
-		log_info("Swapchain incompatible with the surface, recreating...");
-		recreate_swapchain();
-	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-	{
-		log_error("Failed to present swapchain image");
-		return;
-	}
-
-	// Advance frame index
-	frame_index = (frame_index + 1) % FRAME_COUNT;
 }

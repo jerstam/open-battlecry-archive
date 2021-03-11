@@ -34,7 +34,7 @@ static u32 worker_function(void* data)
 		idle_thread_count++;
 		while (run && begin == end)
 		{
-			os_wake_all_condition(idle_cond);
+			os_condition_wake_all(idle_cond);
 			os_wait_condition(queue_cond, queue_mutex);
 		}
 		idle_thread_count--;
@@ -62,7 +62,7 @@ static u32 worker_function(void* data)
 
 	os_lock_mutex(queue_mutex);
 	idle_thread_count++;
-	os_wake_all_condition(idle_cond);
+	os_condition_wake_all(idle_cond);
 	os_unlock_mutex(queue_mutex);
 
     log_info("Stopped worker thread %s", name);
@@ -77,8 +77,8 @@ void jobs_init(void)
 	thread_count = max(1, os_cpu_count() - 2); // CPUs minus main and resource thread
 
 	queue_mutex = os_create_mutex();
-	os_init_condition(queue_cond);
-    os_init_condition(idle_cond);
+	os_create_condition(queue_cond);
+    os_create_condition(idle_cond);
 
 	run = true;
 	idle_thread_count = 0;
@@ -96,7 +96,7 @@ void jobs_quit(void)
 	os_lock_mutex(queue_mutex);
 	run = false;
 	os_unlock_mutex(queue_mutex);
-	os_wake_all_condition(queue_cond);
+	os_condition_wake_all(queue_cond);
 	begin = 0;
 	end = 0;
 
@@ -123,7 +123,7 @@ void jobs_add(job_function_t function, void* data, uintptr_t index)
 		assert(false);
 	}
 	os_unlock_mutex(queue_mutex);
-	os_wake_all_condition(queue_cond);
+	os_condition_wake_all(queue_cond);
 }
 
 void jobs_add_count(job_function_t function, void* data, uintptr_t count)
@@ -141,7 +141,7 @@ void jobs_add_count(job_function_t function, void* data, uintptr_t count)
 		assert(false);
 	}
 	os_unlock_mutex(queue_mutex);
-	os_wake_all_condition(queue_cond);
+	os_condition_wake_all(queue_cond);
 }
 
 void jobs_wait_idle(void)

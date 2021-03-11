@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../macros.h"
+#include "../../core/common.h"
 
 const u32 sprite_vert_spirv[1052] = {
 0x07230203,0x00010500,0x000d000a,0x00000067,0x00000000,0x00020011,0x00000001,0x0006000b,
