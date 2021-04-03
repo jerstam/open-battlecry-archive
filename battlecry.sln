@@ -5,7 +5,6 @@ VisualStudioVersion = 16.0.31004.235
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "src\client\client.vcxproj", "{990CB791-236B-4217-85C3-3632CC2B71A2}"
 	ProjectSection(ProjectDependencies) = postProject
-		{5C5A0624-3A59-453D-98B0-BD0D6637C994} = {5C5A0624-3A59-453D-98B0-BD0D6637C994}
 		{7FF2668E-2983-4FDE-82FE-DBE92EF643FB} = {7FF2668E-2983-4FDE-82FE-DBE92EF643FB}
 	EndProjectSection
 EndProject
@@ -18,8 +17,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asset_packer", "tools\asset_packer\asset_packer.vcxproj", "{A075FB76-9F43-445E-8492-CB1BDBD0BDC8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "core", "src\core\core.vcxproj", "{7FF2668E-2983-4FDE-82FE-DBE92EF643FB}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asset", "src\asset\asset.vcxproj", "{5C5A0624-3A59-453D-98B0-BD0D6637C994}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,10 +48,6 @@ Global
 		{7FF2668E-2983-4FDE-82FE-DBE92EF643FB}.Debug|x64.Build.0 = Debug|x64
 		{7FF2668E-2983-4FDE-82FE-DBE92EF643FB}.Release|x64.ActiveCfg = Release|x64
 		{7FF2668E-2983-4FDE-82FE-DBE92EF643FB}.Release|x64.Build.0 = Release|x64
-		{5C5A0624-3A59-453D-98B0-BD0D6637C994}.Debug|x64.ActiveCfg = Debug|x64
-		{5C5A0624-3A59-453D-98B0-BD0D6637C994}.Debug|x64.Build.0 = Debug|x64
-		{5C5A0624-3A59-453D-98B0-BD0D6637C994}.Release|x64.ActiveCfg = Release|x64
-		{5C5A0624-3A59-453D-98B0-BD0D6637C994}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

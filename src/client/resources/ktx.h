@@ -2,10 +2,9 @@
 
 typedef enum
 {
-    KTX_FORMAT_BC7,
-    KTX_FORMAT_R8,
-    KTX_FORMAT_RGBA8,
-    KTX_FORMAT_COUNT
+    KTX_FORMAT_R8 = 9,
+    KTX_FORMAT_RGBA8 = 37,
+    KTX_FORMAT_BC7 = 145,
 } ktx_format_t;
 
 typedef struct ktx_info_t
@@ -24,4 +23,5 @@ typedef struct ktx_info_t
     int metadata_size;
 } ktx_info_t;
 
+void ktx2_read_info(void* file, ktx_info_t* ktx_info);
 void ktx_parse(const void* data, int size, ktx_info_t* info);

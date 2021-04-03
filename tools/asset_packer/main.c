@@ -7,6 +7,19 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
+
+#define MAX_SUBDIRS 28
+
+static void process_png(const char* file_name)
+{
+
+}
+
+static void process_ktx(const char* file_name)
+{
+
+}
 
 static void process_dir(const TCHAR* path)
 {
@@ -34,6 +47,7 @@ static void process_dir(const TCHAR* path)
 
 			if (dir_name[0] != '.')
 			{
+				assert(subdir_count < MAX_SUBDIRS);
 				wcscpy(subdirs[subdir_count], path);
 				wcscat(subdirs[subdir_count], TEXT("\\"));
 				wcscat(subdirs[subdir_count], dir_name);
@@ -43,20 +57,25 @@ static void process_dir(const TCHAR* path)
 		}
 		else
 		{
+			wprintf(TEXT("  %s\n"), find_data.cFileName);
+
+			char mbs_file_name[32];
+			WideCharToMultiByte(CP_UTF8, 0, find_data.cFileName, 32, mbs_file_name, 32, NULL, NULL);
+
+			char mbs_path[MAX_PATH];
+			wcstombs(mbs_path, path, MAX_PATH);
+			strcat(mbs_path, "\\");
+			strcat(mbs_path, mbs_file_name);
+
 			TCHAR* dot = wcsrchr(find_data.cFileName, '.');
-			if (dot[1] == 'p' && dot[2] == 'n' && dot[3] == 'g')
+
+			if (dot && dot[1] == 'p' && dot[2] == 'n' && dot[3] == 'g')
 			{
-				wprintf(TEXT("  %s\n"), find_data.cFileName);
-
-				char mbs_file_name[32];
-				WideCharToMultiByte(CP_UTF8, 0, find_data.cFileName, 32, mbs_file_name, 32, NULL, NULL);
-
-				char mbs_path[MAX_PATH];
-				wcstombs(mbs_path, path, MAX_PATH);
-				strcat(mbs_path, "\\");
-				strcat(mbs_path, mbs_file_name);
-
-
+				process_png(mbs_path);
+			}
+			else if (dot && dot[1] == 'k' && dot[2] == 't' && dot[3] == 'x')
+			{
+				process_ktx(mbs_path);
 			}
 		}
 	} while (FindNextFile(find, &find_data) != 0);
@@ -74,11 +93,13 @@ int _tmain(int argc, TCHAR* argv[])
 	(void)argc;
 	(void)argv;
 
-	png_init(5400, 2400);
-	bc7_init();
+	//png_init(5400, 2400);
+	//bc7_init();
 
-	bc7_quit();
-	png_quit();
+	process_dir(TEXT("."));
+
+	//bc7_quit();
+	//png_quit();
 
 	return 0;
 }

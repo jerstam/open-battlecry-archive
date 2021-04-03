@@ -12,6 +12,12 @@
       <Filter>fonts</Filter>
     </ClCompile>
     <ClCompile Include="buffer_pool.c" />
+    <ClCompile Include="resources\ktx.c">
+      <Filter>resources</Filter>
+    </ClCompile>
+    <ClCompile Include="resources\pack.c">
+      <Filter>resources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font.h" />
@@ -39,6 +45,12 @@
       <Filter>shaders</Filter>
     </ClInclude>
     <ClInclude Include="buffer_pool.h" />
+    <ClInclude Include="resources\ktx.h">
+      <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="resources\pack.h">
+      <Filter>resources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="shaders">
@@ -46,6 +58,9 @@
     </Filter>
     <Filter Include="fonts">
       <UniqueIdentifier>{773785de-d524-44d5-8580-8a12e63171e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{e329873a-476a-4e3f-9370-1285462f4796}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

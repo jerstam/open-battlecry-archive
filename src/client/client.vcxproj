@@ -105,6 +105,8 @@
     <ClCompile Include="input.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="resource.c" />
+    <ClCompile Include="resources\ktx.c" />
+    <ClCompile Include="resources\pack.c" />
     <ClCompile Include="volk.c" />
     <ClCompile Include="window.c" />
   </ItemGroup>
@@ -114,6 +116,8 @@
     <ClInclude Include="render.h" />
     <ClInclude Include="input.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="resources\ktx.h" />
+    <ClInclude Include="resources\pack.h" />
     <ClInclude Include="shaders\line_frag.h" />
     <ClInclude Include="shaders\line_vert.h" />
     <ClInclude Include="shaders\post_effect_frag.h" />

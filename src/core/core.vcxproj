@@ -93,6 +93,7 @@
     <ClInclude Include="atomic.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="cvar.h" />
+    <ClInclude Include="file.h" />
     <ClInclude Include="hash.h" />
     <ClInclude Include="hash_map.h" />
     <ClInclude Include="jobs.h" />
@@ -105,6 +106,7 @@
   <ItemGroup>
     <ClCompile Include="atomic.c" />
     <ClCompile Include="cvar.c" />
+    <ClCompile Include="file.c" />
     <ClCompile Include="hash.c" />
     <ClCompile Include="hash_map.c" />
     <ClCompile Include="jobs.c" />

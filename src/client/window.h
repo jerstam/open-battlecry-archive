@@ -2,6 +2,12 @@
 
 #include "../core/common.h"
 
+typedef enum
+{
+	WINDOW_BORDERLESS = 0x01,
+	WINDOW_CAPTURE_MOUSE = 0x02
+} window_flags_t;
+
 typedef struct GLFWwindow GLFWwindow;
 typedef struct VkSwapchainKHR_T* VkSwapchainKHR;
 

@@ -35,6 +35,21 @@ typedef struct resource_request_t
 	};
 } resource_request_t;
 
+typedef struct texture_t
+{
+	VkImage image;
+	VkFormat format;
+	VkImageLayout image_layout;
+	VkDeviceMemory memory;
+	VkImageViewType view_type;
+
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+	uint16_t level_count;
+	uint16_t layer_count;
+} texture_t;
+
 static volatile bool run;
 
 static thread_t thread;

@@ -12,6 +12,7 @@
     <ClInclude Include="os.h" />
     <ClInclude Include="pool.h" />
     <ClInclude Include="random.h" />
+    <ClInclude Include="file.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="atomic.c" />
@@ -24,5 +25,6 @@
     <ClCompile Include="os.c" />
     <ClCompile Include="pool.c" />
     <ClCompile Include="random.c" />
+    <ClCompile Include="file.c" />
   </ItemGroup>
 </Project>

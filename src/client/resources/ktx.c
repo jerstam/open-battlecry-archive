@@ -5,154 +5,19 @@
 #include <string.h>
 #include <assert.h>
 
-#define KTX_ETC1_RGB8_OES                             0x8D64
-#define KTX_COMPRESSED_R11_EAC                        0x9270
-#define KTX_COMPRESSED_SIGNED_R11_EAC                 0x9271
-#define KTX_COMPRESSED_RG11_EAC                       0x9272
-#define KTX_COMPRESSED_SIGNED_RG11_EAC                0x9273
-#define KTX_COMPRESSED_RGB8_ETC2                      0x9274
-#define KTX_COMPRESSED_SRGB8_ETC2                     0x9275
-#define KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2  0x9276
-#define KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 0x9277
-#define KTX_COMPRESSED_RGBA8_ETC2_EAC                 0x9278
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC          0x9279
-#define KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG           0x8C00
-#define KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG           0x8C01
-#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG          0x8C02
-#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG          0x8C03
-#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG          0x9137
-#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG          0x9138
-#define KTX_COMPRESSED_RGB_S3TC_DXT1_EXT              0x83F0
-#define KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT             0x83F1
-#define KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT             0x83F2
-#define KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT             0x83F3
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT       0x8C4D
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT       0x8C4E
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT       0x8C4F
-#define KTX_COMPRESSED_LUMINANCE_LATC1_EXT            0x8C70
-#define KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT      0x8C72
-#define KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB            0x8E8C
-#define KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB      0x8E8D
-#define KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB      0x8E8E
-#define KTX_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB    0x8E8F
-#define KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT          0x8A54
-#define KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT          0x8A55
-#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_2BPPV1_EXT    0x8A56
-#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT    0x8A57
-#define KTX_ATC_RGB_AMD                               0x8C92
-#define KTX_ATC_RGBA_EXPLICIT_ALPHA_AMD               0x8C93
-#define KTX_ATC_RGBA_INTERPOLATED_ALPHA_AMD           0x87EE
-#define KTX_COMPRESSED_RGBA_ADDSKTX_4x4_KHR              0x93B0
-#define KTX_COMPRESSED_RGBA_ADDSKTX_5x5_KHR              0x93B2
-#define KTX_COMPRESSED_RGBA_ADDSKTX_6x6_KHR              0x93B4
-#define KTX_COMPRESSED_RGBA_ADDSKTX_8x5_KHR              0x93B5
-#define KTX_COMPRESSED_RGBA_ADDSKTX_8x6_KHR              0x93B6
-#define KTX_COMPRESSED_RGBA_ADDSKTX_10x5_KHR             0x93B8
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_4x4_KHR      0x93D0
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_5x5_KHR      0x93D2
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_6x6_KHR      0x93D4
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_8x5_KHR      0x93D5
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_8x6_KHR      0x93D6
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ADDSKTX_10x5_KHR     0x93D8
+#define KTX2_HEADER_SIZE 80
 
-#define KTX_A8                                        0x803C
-#define KTX_R8                                        0x8229
-#define KTX_R16                                       0x822A
-#define KTX_RG8                                       0x822B
-#define KTX_RG16                                      0x822C
-#define KTX_R16F                                      0x822D
-#define KTX_R32F                                      0x822E
-#define KTX_RG16F                                     0x822F
-#define KTX_RG32F                                     0x8230
-#define KTX_RGBA8                                     0x8058
-#define KTX_RGBA16                                    0x805B
-#define KTX_RGBA16F                                   0x881A
-#define KTX_R32UI                                     0x8236
-#define KTX_RG32UI                                    0x823C
-#define KTX_RGBA32UI                                  0x8D70
-#define KTX_RGBA32F                                   0x8814
-#define KTX_RGB565                                    0x8D62
-#define KTX_RGBA4                                     0x8056
-#define KTX_RGB5_A1                                   0x8057
-#define KTX_RGB10_A2                                  0x8059
-#define KTX_R8I                                       0x8231
-#define KTX_R8UI                                      0x8232
-#define KTX_R16I                                      0x8233
-#define KTX_R16UI                                     0x8234
-#define KTX_R32I                                      0x8235
-#define KTX_R32UI                                     0x8236
-#define KTX_RG8I                                      0x8237
-#define KTX_RG8UI                                     0x8238
-#define KTX_RG16I                                     0x8239
-#define KTX_RG16UI                                    0x823A
-#define KTX_RG32I                                     0x823B
-#define KTX_RG32UI                                    0x823C
-#define KTX_R8_SNORM                                  0x8F94
-#define KTX_RG8_SNORM                                 0x8F95
-#define KTX_RGB8_SNORM                                0x8F96
-#define KTX_RGBA8_SNORM                               0x8F97
-#define KTX_R16_SNORM                                 0x8F98
-#define KTX_RG16_SNORM                                0x8F99
-#define KTX_RGB16_SNORM                               0x8F9A
-#define KTX_RGBA16_SNORM                              0x8F9B
-#define KTX_SRGB8                                     0x8C41
-#define KTX_SRGB8_ALPHA8                              0x8C43
-#define KTX_RGBA32UI                                  0x8D70
-#define KTX_RGB32UI                                   0x8D71
-#define KTX_RGBA16UI                                  0x8D76
-#define KTX_RGB16UI                                   0x8D77
-#define KTX_RGBA8UI                                   0x8D7C
-#define KTX_RGB8UI                                    0x8D7D
-#define KTX_RGBA32I                                   0x8D82
-#define KTX_RGB32I                                    0x8D83
-#define KTX_RGBA16I                                   0x8D88
-#define KTX_RGB16I                                    0x8D89
-#define KTX_RGBA8I                                    0x8D8E
-#define KTX_RGB8                                      0x8051
-#define KTX_RGB8I                                     0x8D8F
-#define KTX_RGB9_E5                                   0x8C3D
-#define KTX_R11F_G11F_B10F                            0x8C3A
-
-#define KTX_ZERO                                      0
-#define KTX_RED                                       0x1903
-#define KTX_ALPHA                                     0x1906
-#define KTX_RGB                                       0x1907
-#define KTX_RGBA                                      0x1908
-#define KTX_BGRA                                      0x80E1
-#define KTX_RG                                        0x8227
-
-#define KTX_BYTE                                      0x1400
-#define KTX_UNSIGNED_BYTE                             0x1401
-#define KTX_SHORT                                     0x1402
-#define KTX_UNSIGNED_SHORT                            0x1403
-#define KTX_INT                                       0x1404
-#define KTX_UNSIGNED_INT                              0x1405
-#define KTX_FLOAT                                     0x1406
-#define KTX_HALF_FLOAT                                0x140B
-#define KTX_UNSIGNED_INT_5_9_9_9_REV                  0x8C3E
-#define KTX_UNSIGNED_SHORT_5_6_5                      0x8363
-#define KTX_UNSIGNED_SHORT_4_4_4_4                    0x8033
-#define KTX_UNSIGNED_SHORT_5_5_5_1                    0x8034
-#define KTX_UNSIGNED_INT_2_10_10_10_REV               0x8368
-#define KTX_UNSIGNED_INT_10F_11F_11F_REV              0x8C3B
-
-typedef struct ktx_header_t
+typedef struct index32_t
 {
-	uint8_t identifier[12];
-	uint32_t endianness;
-	uint32_t type;
-	uint32_t type_size;
-	uint32_t format;
-	uint32_t internal_format;
-	uint32_t base_internal_format;
-	uint32_t width;
-	uint32_t height;
-	uint32_t depth;
-	uint32_t array_count;
-	uint32_t face_count;
-	uint32_t mip_count;
-	uint32_t metadata_size;
-} ktx_header_t;
+    uint32_t byteOffset;
+    uint32_t byteLength;
+} index32_t;
+
+typedef struct index64_t
+{
+    uint32_t byteOffset;
+    uint32_t byteLength;
+} index64_t;
 
 typedef struct ktx2_header_t
 {
@@ -166,13 +31,18 @@ typedef struct ktx2_header_t
 	uint32_t face_count;
 	uint32_t level_count;
 	uint32_t supercompression_scheme;
-	uint32_t dfd_byte_offset;
-	uint32_t dfd_byte_length;
-	uint32_t kvd_byte_offset;
-	uint32_t kvd_byte_length;
-	uint64_t sgd_byte_offset;
-	uint64_t sgd_byte_length;
+    index32_t data_format_descriptor;
+    index32_t key_value_data;
+    index64_t supercompression_global_data;
 } ktx2_header_t;
+
+typedef enum supercompression_t
+{
+    SUPERCOMPRESSION_NONE = 0,
+    SUPERCOMPRESSION_CRN = 1,
+    SUPERCOMPRESSION_ZLIB = 2,
+    SUPERCOMPRESSION_ZSTD = 3
+} supercompression_t;
 
 typedef struct memory_t
 {
@@ -216,7 +86,6 @@ typedef struct ktx_format_info_t
     uint32_t type;
 } ktx_format_info_t;
 
-static const uint8_t ktx_identifier[12] = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
 static const uint8_t ktx2_identifier[12] = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
 
 static const block_info_t block_infos[] =
@@ -333,6 +202,10 @@ static inline int read(memory_t* memory, void* buffer, int size)
     memcpy(buffer, memory->buffer + memory->offset, read_bytes);
     memory->offset += read_bytes;
     return read_bytes;
+}
+
+void ktx2_read_info(void* file, ktx_info_t* ktx_info)
+{
 }
 
 void ktx_parse(const void* data, int size, ktx_info_t* info)
