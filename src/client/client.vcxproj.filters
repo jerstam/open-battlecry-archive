@@ -12,9 +12,6 @@
       <Filter>fonts</Filter>
     </ClCompile>
     <ClCompile Include="buffer_pool.c" />
-    <ClCompile Include="resources\ktx.c">
-      <Filter>resources</Filter>
-    </ClCompile>
     <ClCompile Include="resources\pack.c">
       <Filter>resources</Filter>
     </ClCompile>
@@ -45,9 +42,6 @@
       <Filter>shaders</Filter>
     </ClInclude>
     <ClInclude Include="buffer_pool.h" />
-    <ClInclude Include="resources\ktx.h">
-      <Filter>resources</Filter>
-    </ClInclude>
     <ClInclude Include="resources\pack.h">
       <Filter>resources</Filter>
     </ClInclude>

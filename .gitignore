@@ -92,20 +92,9 @@ fabric.properties
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
 # Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
 
 # Executables
 *.out
@@ -113,7 +102,6 @@ fabric.properties
 *_d.exe
 
 # CMake ================================
-bin/
 build/
 CMakeLists.txt.user
 CMakeCache.txt
@@ -128,7 +116,6 @@ CTestTestfile.cmake
 .vscode
 .vs
 temp
-build
 x64
 *.ilk
 *.pdb
